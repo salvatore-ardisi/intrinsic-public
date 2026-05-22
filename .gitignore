@@ -1,0 +1,22 @@
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Claude Code
+.claude/
+CLAUDE.md
+AGENTS.md
+
+# OS
+.DS_Store
+
+# Node
+node_modules/
+
+# Expo
+.expo/
+dist/
+
+# Secrets
+*.secret
