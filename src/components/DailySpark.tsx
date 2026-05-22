@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Image } from 'react-native';
-import * as WebBrowser from 'expo-web-browser';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fonts } from '../config/theme';
 import { ENABLE_AI, ANTHROPIC_API_KEY } from '../config/env';
 import { fetchDailySpark, generateSparkInterpretation } from '../lib/api';
@@ -8,6 +8,49 @@ import type { SparkResponse } from '../lib/types';
 
 export interface DailySparkHandle {
   refresh: () => Promise<void>;
+}
+
+const SECTION_LABELS = ['MARKET INTERPRETATION', 'WHY THIS MATTERS', 'WHAT TO WATCH'] as const;
+
+function sparkDateKey(date: string): string {
+  const normalized = date.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+  return `spark_ai_${normalized}`;
+}
+
+function renderStyledInterpretation(text: string) {
+  const parts: Array<{ type: 'label' | 'body'; text: string }> = [];
+  let remaining = text;
+
+  while (remaining.length > 0) {
+    let earliest = -1;
+    let earliestLabel = '';
+    for (const label of SECTION_LABELS) {
+      const idx = remaining.indexOf(label);
+      if (idx !== -1 && (earliest === -1 || idx < earliest)) {
+        earliest = idx;
+        earliestLabel = label;
+      }
+    }
+
+    if (earliest === -1) {
+      parts.push({ type: 'body', text: remaining });
+      break;
+    }
+
+    if (earliest > 0) {
+      parts.push({ type: 'body', text: remaining.slice(0, earliest) });
+    }
+    parts.push({ type: 'label', text: earliestLabel });
+    remaining = remaining.slice(earliest + earliestLabel.length);
+  }
+
+  return parts.map((part, i) =>
+    part.type === 'label' ? (
+      <Text key={i} style={si.interpLabel}>{part.text}</Text>
+    ) : (
+      <Text key={i} style={si.interpBody}>{part.text}</Text>
+    ),
+  );
 }
 
 const DailySpark = forwardRef<DailySparkHandle>(function DailySpark(_props, ref) {
@@ -31,6 +74,8 @@ const DailySpark = forwardRef<DailySparkHandle>(function DailySpark(_props, ref)
         setSpark(data);
         setInterpretation(null);
         setImageError(false);
+        const cached = await AsyncStorage.getItem(sparkDateKey(data.date));
+        if (cached) setInterpretation(cached);
       } else {
         setError(true);
       }
@@ -46,20 +91,20 @@ const DailySpark = forwardRef<DailySparkHandle>(function DailySpark(_props, ref)
   useImperativeHandle(ref, () => ({ refresh: () => load(true) }), [load]);
 
   const fetchInterpretation = useCallback(async () => {
-    if (!aiActive || !spark) return;
-    if (interpretation) return;
+    if (!aiActive || !spark || interpretation) return;
     setAiLoading(true);
     setAiError(null);
     try {
       const text = await generateSparkInterpretation(spark.title, spark.body, spark.sources);
       setInterpretation(text);
+      await AsyncStorage.setItem(sparkDateKey(spark.date), text);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Unknown error';
       setAiError(msg);
     } finally {
       setAiLoading(false);
     }
-  }, [aiActive, interpretation, spark]);
+  }, [aiActive, spark, interpretation]);
 
   if (loading) {
     return (
@@ -126,23 +171,6 @@ const DailySpark = forwardRef<DailySparkHandle>(function DailySpark(_props, ref)
             />
           )}
 
-          {spark.apolloLinks.length > 0 && (
-            <View style={s.linksSection}>
-              <Text style={s.linksSectionTitle}>WHAT'S NEW AT APOLLO</Text>
-              {spark.apolloLinks.map((link, i) => (
-                <TouchableOpacity
-                  key={i}
-                  onPress={() => WebBrowser.openBrowserAsync(link.url)}
-                  activeOpacity={0.7}
-                  style={s.linkRow}
-                >
-                  <Text style={s.linkText} numberOfLines={2}>{link.title}</Text>
-                  <Text style={s.linkArrow}>→</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-
           {aiActive && !interpretation && !aiLoading && !aiError && (
             <TouchableOpacity onPress={fetchInterpretation} activeOpacity={0.7} style={s.aiBtn}>
               <Text style={s.aiBtnText}>WHAT THIS MEANS</Text>
@@ -158,7 +186,7 @@ const DailySpark = forwardRef<DailySparkHandle>(function DailySpark(_props, ref)
 
           {aiActive && interpretation && (
             <View style={s.interpBlock}>
-              <Text style={s.interpText}>{interpretation}</Text>
+              <Text>{renderStyledInterpretation(interpretation)}</Text>
             </View>
           )}
 
@@ -189,6 +217,21 @@ const DailySpark = forwardRef<DailySparkHandle>(function DailySpark(_props, ref)
 });
 
 export default DailySpark;
+
+const si = StyleSheet.create({
+  interpLabel: {
+    fontFamily: fonts.monoBold,
+    fontSize: 11,
+    color: colors.accent,
+    lineHeight: 17,
+  },
+  interpBody: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    color: '#cccccc',
+    lineHeight: 17,
+  },
+});
 
 const s = StyleSheet.create({
   card: {
@@ -303,36 +346,6 @@ const s = StyleSheet.create({
     height: 200,
     marginTop: 10,
   },
-  linksSection: {
-    marginTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderSubtle,
-    paddingTop: 8,
-  },
-  linksSectionTitle: {
-    fontFamily: fonts.monoBold,
-    fontSize: 9,
-    color: colors.textMuted,
-    marginBottom: 4,
-  },
-  linkRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 5,
-  },
-  linkText: {
-    fontFamily: fonts.mono,
-    fontSize: 11,
-    color: colors.textSecondary,
-    flex: 1,
-    marginRight: 8,
-  },
-  linkArrow: {
-    fontFamily: fonts.mono,
-    fontSize: 11,
-    color: colors.textMuted,
-  },
   aiBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -374,12 +387,6 @@ const s = StyleSheet.create({
     backgroundColor: '#0d0800',
     paddingHorizontal: 10,
     paddingVertical: 8,
-  },
-  interpText: {
-    fontFamily: fonts.mono,
-    fontSize: 11,
-    color: '#cccccc',
-    lineHeight: 17,
   },
   errorNote: {
     fontFamily: fonts.mono,

@@ -518,7 +518,7 @@ export async function generateMacroSummary(indicators: Indicator[]): Promise<str
     body: JSON.stringify({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 500,
-      system: 'You are a macroeconomic analyst. Given the current values of key U.S. economic indicators, provide a concise 3-4 sentence synthesis of current economic conditions. Be specific with numbers. Note any tensions between indicators (e.g. strong employment but rising inflation). Flag any warning signals. Do not give investment advice. Do not use markdown formatting.',
+      system: 'You are a macroeconomic analyst. Given the current values of key U.S. economic indicators, provide a concise 3-4 sentence synthesis of current economic conditions. Be specific with numbers. Note any tensions between indicators (e.g. strong employment but rising inflation). Flag any warning signals. Do not give investment advice. Do not use markdown formatting, asterisks, bold, headers, or bullet points. Use plain text only. Use line breaks to separate sections.',
       messages: [{ role: 'user', content: indicatorLines }],
     }),
   });
@@ -557,7 +557,7 @@ export async function generateSparkInterpretation(title: string, body: string, s
     body: JSON.stringify({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 300,
-      system: 'You are a macro analyst. Analyze this Daily Spark insight from Apollo\'s Chief Economist. Provide a brief interpretation: what this means for markets, why it matters, and what to watch. Keep it concise and factual. No predictions, no hype, no investment advice. Do not use markdown formatting.',
+      system: 'You are a macro analyst. Analyze this Daily Spark insight from Apollo\'s Chief Economist. Keep it concise and factual. No predictions, no hype, no investment advice. Do not use markdown formatting, asterisks, bold, headers, or bullet points. Use plain text only. Use line breaks to separate sections. Label sections as MARKET INTERPRETATION, WHY THIS MATTERS, and WHAT TO WATCH on their own lines.',
       messages: [{ role: 'user', content: userContent }],
     }),
   });
