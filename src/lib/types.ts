@@ -82,6 +82,16 @@ export interface TickerEntry {
   title: string;
 }
 
+export interface SparkResponse {
+  date: string;
+  title: string;
+  body: string;
+  sources: string | null;
+  chartImageUrl: string | null;
+  apolloLinks: Array<{ title: string; url: string }>;
+  fetchedAt: string;
+}
+
 export interface CompanyNewsItem {
   ticker: string;
   title: string;

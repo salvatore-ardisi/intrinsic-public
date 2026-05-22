@@ -1,32 +1,57 @@
-import { useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useState, useCallback, useEffect, useImperativeHandle, forwardRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Image } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import { colors, fonts } from '../config/theme';
 import { ENABLE_AI, ANTHROPIC_API_KEY } from '../config/env';
-import { generateSparkInterpretation } from '../lib/api';
+import { fetchDailySpark, generateSparkInterpretation } from '../lib/api';
+import type { SparkResponse } from '../lib/types';
 
-const SPARK = {
-  title: 'The Disconnect Between Hard and Soft Data',
-  date: 'MAY 21',
-  source: 'Apollo',
-  author: 'Torsten Sløk',
-  body: 'Soft data — surveys, sentiment — has rolled over while hard data — actual spending, output — stays firm. The gap is unusually wide.',
-};
+export interface DailySparkHandle {
+  refresh: () => Promise<void>;
+}
 
-export default function DailySpark() {
+const DailySpark = forwardRef<DailySparkHandle>(function DailySpark(_props, ref) {
+  const [spark, setSpark] = useState<SparkResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [interpretation, setInterpretation] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [imageError, setImageError] = useState(false);
 
   const aiActive = ENABLE_AI && !!ANTHROPIC_API_KEY;
 
+  const load = useCallback(async (force = false) => {
+    setLoading(true);
+    setError(false);
+    try {
+      const data = await fetchDailySpark(force);
+      if (data) {
+        setSpark(data);
+        setInterpretation(null);
+        setImageError(false);
+      } else {
+        setError(true);
+      }
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  useImperativeHandle(ref, () => ({ refresh: () => load(true) }), [load]);
+
   const fetchInterpretation = useCallback(async () => {
-    if (!aiActive) return;
+    if (!aiActive || !spark) return;
     if (interpretation) return;
     setAiLoading(true);
     setAiError(null);
     try {
-      const text = await generateSparkInterpretation(SPARK.title, SPARK.body);
+      const text = await generateSparkInterpretation(spark.title, spark.body, spark.sources);
       setInterpretation(text);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Unknown error';
@@ -34,7 +59,29 @@ export default function DailySpark() {
     } finally {
       setAiLoading(false);
     }
-  }, [aiActive, interpretation]);
+  }, [aiActive, interpretation, spark]);
+
+  if (loading) {
+    return (
+      <View style={s.card}>
+        <View style={s.loadingContainer}>
+          <ActivityIndicator color={colors.amber} size="small" />
+          <Text style={s.loadingText}>LOADING DAILY SPARK...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (error || !spark) {
+    return (
+      <View style={s.card}>
+        <Text style={s.errorTitle}>DAILY SPARK UNAVAILABLE</Text>
+        <TouchableOpacity onPress={() => load(true)} activeOpacity={0.7} style={s.retryBtn}>
+          <Text style={s.retryBtnText}>RETRY</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={s.card}>
@@ -46,27 +93,56 @@ export default function DailySpark() {
         <View style={s.headerLeft}>
           <Text style={s.headerText}>DAILY SPARK</Text>
           <View style={s.sourcePill}>
-            <Text style={s.sourcePillText}>{SPARK.source.toUpperCase()}</Text>
+            <Text style={s.sourcePillText}>APOLLO</Text>
           </View>
         </View>
         <View style={s.headerRight}>
-          <Text style={s.date}>{SPARK.date}</Text>
+          <Text style={s.date}>{spark.date.toUpperCase()}</Text>
           <Text style={s.chevron}>{expanded ? '▼' : '▶'}</Text>
         </View>
       </TouchableOpacity>
 
       {!expanded && (
         <Text style={s.collapsedHint} numberOfLines={1}>
-          {SPARK.title} · tap to read
+          {spark.title} · tap to read
         </Text>
       )}
 
       {expanded && (
         <View style={s.body}>
-          <Text style={s.title}>{SPARK.title}</Text>
-          <Text style={s.bodyText}>{SPARK.body}</Text>
+          <Text style={s.title}>{spark.title}</Text>
+          <Text style={s.bodyText}>{spark.body}</Text>
 
-          {/* AI interpretation */}
+          {spark.sources && (
+            <Text style={s.sourcesText}>{spark.sources}</Text>
+          )}
+
+          {spark.chartImageUrl && !imageError && (
+            <Image
+              source={{ uri: spark.chartImageUrl }}
+              style={s.chartImage}
+              resizeMode="contain"
+              onError={() => setImageError(true)}
+            />
+          )}
+
+          {spark.apolloLinks.length > 0 && (
+            <View style={s.linksSection}>
+              <Text style={s.linksSectionTitle}>WHAT'S NEW AT APOLLO</Text>
+              {spark.apolloLinks.map((link, i) => (
+                <TouchableOpacity
+                  key={i}
+                  onPress={() => WebBrowser.openBrowserAsync(link.url)}
+                  activeOpacity={0.7}
+                  style={s.linkRow}
+                >
+                  <Text style={s.linkText} numberOfLines={2}>{link.title}</Text>
+                  <Text style={s.linkArrow}>→</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
           {aiActive && !interpretation && !aiLoading && !aiError && (
             <TouchableOpacity onPress={fetchInterpretation} activeOpacity={0.7} style={s.aiBtn}>
               <Text style={s.aiBtnText}>WHAT THIS MEANS</Text>
@@ -104,13 +180,15 @@ export default function DailySpark() {
           )}
 
           <Text style={s.footer}>
-            {SPARK.author} · {SPARK.source} · interpretation by Claude API
+            Apollo · interpretation by Claude API
           </Text>
         </View>
       )}
     </View>
   );
-}
+});
+
+export default DailySpark;
 
 const s = StyleSheet.create({
   card: {
@@ -121,6 +199,34 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.accent,
     backgroundColor: colors.surfaceAlt,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  loadingText: {
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    color: colors.amber,
+  },
+  errorTitle: {
+    fontFamily: fonts.monoBold,
+    fontSize: 11,
+    color: colors.textMuted,
+  },
+  retryBtn: {
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: colors.accent,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginTop: 8,
+  },
+  retryBtnText: {
+    fontFamily: fonts.monoBold,
+    fontSize: 10,
+    color: colors.accent,
   },
   headerRow: {
     flexDirection: 'row',
@@ -175,7 +281,7 @@ const s = StyleSheet.create({
   title: {
     fontFamily: fonts.monoBold,
     fontSize: 13,
-    color: colors.textPrimary,
+    color: colors.accent,
     lineHeight: 18,
   },
   bodyText: {
@@ -184,6 +290,48 @@ const s = StyleSheet.create({
     color: colors.textSecondary,
     lineHeight: 17,
     marginTop: 8,
+  },
+  sourcesText: {
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    color: colors.textMuted,
+    lineHeight: 15,
+    marginTop: 8,
+  },
+  chartImage: {
+    width: '100%',
+    height: 200,
+    marginTop: 10,
+  },
+  linksSection: {
+    marginTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderSubtle,
+    paddingTop: 8,
+  },
+  linksSectionTitle: {
+    fontFamily: fonts.monoBold,
+    fontSize: 9,
+    color: colors.textMuted,
+    marginBottom: 4,
+  },
+  linkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 5,
+  },
+  linkText: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    color: colors.textSecondary,
+    flex: 1,
+    marginRight: 8,
+  },
+  linkArrow: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    color: colors.textMuted,
   },
   aiBtn: {
     flexDirection: 'row',

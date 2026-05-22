@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, RefreshControl,
   StyleSheet, ActivityIndicator, Linking,
@@ -8,11 +8,13 @@ import { fetchNews } from '../lib/api';
 import { decodeHTMLEntities } from '../lib/html';
 import type { NewsItem } from '../lib/types';
 import DailySpark from '../components/DailySpark';
+import type { DailySparkHandle } from '../components/DailySpark';
 
 export default function NewsScreen() {
   const [items, setItems] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const sparkRef = useRef<DailySparkHandle>(null);
 
   const load = useCallback(async (force = false) => {
     try {
@@ -28,7 +30,7 @@ export default function NewsScreen() {
   const onRefresh = useCallback(async () => {
     console.log('[NewsScreen] onRefresh fired');
     setRefreshing(true);
-    await load(true);
+    await Promise.all([load(true), sparkRef.current?.refresh()]);
     setRefreshing(false);
   }, [load]);
 
@@ -50,7 +52,7 @@ export default function NewsScreen() {
       }
       ListHeaderComponent={
         <>
-          <DailySpark />
+          <DailySpark ref={sparkRef} />
           <View style={s.statusBar}>
             <Text style={s.statusText}>{items.length} ARTICLES</Text>
             <Text style={s.statusSep}>|</Text>

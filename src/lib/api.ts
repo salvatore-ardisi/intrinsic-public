@@ -4,7 +4,7 @@ import {
   CATEGORY_ORDER, FED_RSS_FEEDS, NEWS_FEEDS, RESEARCH_FEEDS,
 } from '../config/series';
 import type { SeriesConfig } from '../config/series';
-import type { Indicator, CategoryGroup, FedComm, NewsItem, ResearchItem, SparkItem, YieldCurvePoint, Observation, CompanyNewsItem } from './types';
+import type { Indicator, CategoryGroup, FedComm, NewsItem, ResearchItem, SparkItem, YieldCurvePoint, Observation, CompanyNewsItem, SparkResponse } from './types';
 import { decodeHTMLEntities } from './html';
 
 const cache: Record<string, { data: unknown; ts: number }> = {};
@@ -407,6 +407,39 @@ export async function fetchNews(force = false): Promise<NewsItem[]> {
   return items;
 }
 
+export async function fetchDailySpark(force = false): Promise<SparkResponse | null> {
+  const cacheKey = 'daily_spark';
+  if (!force) {
+    const entry = cache[cacheKey];
+    if (entry && Date.now() - entry.ts < 30 * 60 * 1000) return entry.data as SparkResponse;
+  }
+
+  const { PRICE_PROXY_URL } = await import('../config/env');
+  if (!PRICE_PROXY_URL) return null;
+
+  try {
+    const resp = await fetch(`${PRICE_PROXY_URL}/spark`);
+    if (!resp.ok) return null;
+    const json = await resp.json();
+    if (json.error) return null;
+
+    const data: SparkResponse = {
+      date: decodeHTMLEntities(json.date ?? ''),
+      title: decodeHTMLEntities(json.title ?? ''),
+      body: decodeHTMLEntities(json.body ?? ''),
+      sources: json.sources ? decodeHTMLEntities(json.sources) : null,
+      chartImageUrl: json.chartImageUrl ?? null,
+      apolloLinks: Array.isArray(json.apolloLinks) ? json.apolloLinks : [],
+      fetchedAt: json.fetchedAt ?? new Date().toISOString(),
+    };
+
+    cache[cacheKey] = { data, ts: Date.now() };
+    return data;
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchSpark(force = false): Promise<SparkItem[]> {
   const { SPARK_FEED_URL } = await import('../config/env');
   if (!SPARK_FEED_URL) return [];
@@ -504,13 +537,15 @@ export function clearMacroSummaryCache() {
 
 const SPARK_INTERP_TTL = 60 * 60 * 1000;
 
-export async function generateSparkInterpretation(title: string, body: string): Promise<string> {
+export async function generateSparkInterpretation(title: string, body: string, sources?: string | null): Promise<string> {
   const cacheKey = `spark_interp_${title}`;
   const entry = cache[cacheKey];
   if (entry && Date.now() - entry.ts < SPARK_INTERP_TTL) return entry.data as string;
 
   const { ANTHROPIC_API_KEY } = await import('../config/env');
   if (!ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY not configured');
+
+  const userContent = `Title: ${title}\n\n${body}${sources ? `\n\nSources: ${sources}` : ''}`;
 
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -522,8 +557,8 @@ export async function generateSparkInterpretation(title: string, body: string): 
     body: JSON.stringify({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 300,
-      system: 'You are a macroeconomic analyst. Given a short economic observation, provide a 3-5 sentence plain-language interpretation: what it means, whether it signals continuation or reversal of current trends, and what to watch next. Be factual and concise. No predictions, no hype, no investment advice. Do not use markdown formatting.',
-      messages: [{ role: 'user', content: `Title: ${title}\n\n${body}` }],
+      system: 'You are a macro analyst. Analyze this Daily Spark insight from Apollo\'s Chief Economist. Provide a brief interpretation: what this means for markets, why it matters, and what to watch. Keep it concise and factual. No predictions, no hype, no investment advice. Do not use markdown formatting.',
+      messages: [{ role: 'user', content: userContent }],
     }),
   });
 
