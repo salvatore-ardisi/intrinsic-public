@@ -1,0 +1,14 @@
+#!/bin/sh
+# Pre-commit hook: scan for potential secrets
+echo "Scanning for secrets..."
+
+# Check for common secret patterns
+if git diff --cached --diff-filter=ACM | grep -iE '(api[_-]?key|secret|password|token)\s*[:=]\s*["\x27][A-Za-z0-9+/=]{16,}' | grep -v '\.env\.example' | grep -v 'your_'; then
+    echo ""
+    echo "ERROR: Possible secret detected in staged files."
+    echo "Review the above matches. If they are false positives, commit with --no-verify."
+    exit 1
+fi
+
+echo "No secrets detected."
+exit 0
