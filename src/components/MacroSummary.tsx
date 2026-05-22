@@ -102,14 +102,7 @@ export default function MacroSummary({ indicators }: Props) {
             <Text style={s.aiBadgeText}>AI</Text>
           </View>
         </View>
-        <View style={s.headerRight}>
-          {aiActive && !collapsed && summary && !loading && (
-            <TouchableOpacity onPress={() => fetchSummary(true)} activeOpacity={0.5} style={s.refreshBtn}>
-              <Text style={s.refreshIcon}>↻</Text>
-            </TouchableOpacity>
-          )}
-          <Text style={s.chevron}>{collapsed ? '▶' : '▼'}</Text>
-        </View>
+        <Text style={s.chevron}>{collapsed ? '▶' : '▼'}</Text>
       </TouchableOpacity>
 
       {!collapsed && (
@@ -191,11 +184,6 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
   headerText: {
     fontFamily: fonts.monoBold,
     fontSize: 11,
@@ -218,14 +206,6 @@ const s = StyleSheet.create({
     fontFamily: fonts.mono,
     fontSize: 10,
     color: colors.textMuted,
-  },
-  refreshBtn: {
-    padding: 2,
-  },
-  refreshIcon: {
-    fontFamily: fonts.mono,
-    fontSize: 14,
-    color: colors.accent,
   },
   analyzing: {
     fontFamily: fonts.mono,
