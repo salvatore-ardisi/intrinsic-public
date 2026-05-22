@@ -1,4 +1,4 @@
-![License: GPL-3.0](https://img.shields.io/badge/License-GPL%203.0-blue.svg) ![Platform: iOS](https://img.shields.io/badge/Platform-iOS-lightgrey.svg) ![Expo SDK 54](https://img.shields.io/badge/Expo_SDK-54-000020.svg) ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6.svg) ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
+![License: GPL-3.0](https://img.shields.io/badge/License-GPL%203.0-blue.svg) ![Platform: iOS](https://img.shields.io/badge/Platform-iOS-lightgrey.svg) ![Expo SDK 54](https://img.shields.io/badge/Expo_SDK-54-000020.svg) ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6.svg) ![Cloudflare Workers](https://img.shields.io/badge/Proxy-Cloudflare_Workers-F38020.svg) ![Claude API](https://img.shields.io/badge/AI-Claude_API-D97757.svg) ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
 
 # Intrinsic Mobile
 
@@ -6,9 +6,13 @@ A mobile market intelligence app built with Expo and React Native. Dense, data-f
 
 ## Features
 
-**Economy (live)** - FRED and BLS macro series grouped by Labor, Inflation, Growth, and Interest Rates. Sparklines, historical analysis, multi-series overlay charts, Fed RSS feeds, aggregated financial news, and optional AI commentary via Claude API.
+**Economy (live)** - FRED and BLS macro series grouped by Labor, Inflation, Growth, and Interest Rates. Sparklines, historical analysis, multi-series overlay charts, Fed RSS feeds, aggregated financial news. AI-powered Macro Summary with AsyncStorage caching by calendar date.
 
-**Stocks (partially live)** - Watchlist with live quotes and company profiles. Stock detail with daily charts. SEC EDGAR filing search and company news via Google News RSS.
+**Daily Spark (live)** - Apollo Chief Economist daily briefing fetched from a Cloudflare Worker proxy endpoint. Displays title, body, sources, and inline chart image. AI interpretation via Claude API with AsyncStorage caching by email date.
+
+**Stocks (live)** - Watchlist with live quotes and company profiles. Stock detail with daily charts. SEC EDGAR filing search. Company news via Google News RSS driven by the watchlist.
+
+**Filings (live)** - Watchlist-driven SEC EDGAR filing feed. Filing type reference card on the empty state.
 
 **Bonds, ETFs, Futures, Commodities** - Navigation and tab structures are defined and ready for implementation.
 
@@ -19,7 +23,8 @@ A mobile market intelligence app built with Expo and React Native. Dense, data-f
 - JetBrains Mono font
 - react-native-svg for charting
 - fast-xml-parser for RSS/XML feeds
-- Cloudflare Worker proxy for third-party API key management
+- Cloudflare Worker proxy for third-party API key management and Daily Spark delivery
+- Claude API for AI commentary (Macro Summary, Daily Spark interpretation)
 
 ## Setup
 
@@ -73,7 +78,9 @@ Scan the QR code with Expo Go on your device. Use `--tunnel` if your device is o
 
 The app uses a floor-based navigation model. A custom animated drawer selects an asset class (Economy, Stocks, Bonds, etc.). Each floor is a material-top-tabs navigator with a bottom tab bar supporting swipe between tabs. The stock detail screen is a root-level native-stack modal to avoid gesture conflicts with the drawer and pager.
 
-A Cloudflare Worker proxy holds third-party API keys server-side so the app bundle never ships them. It exposes quote, profile, news, and candle endpoints with built-in response caching.
+A Cloudflare Worker proxy holds third-party API keys server-side so the app bundle never ships them. It exposes quote, profile, news, candle, and spark endpoints with built-in response caching.
+
+AI commentary (Macro Summary, Daily Spark interpretation) is generated via the Claude API and cached in AsyncStorage to avoid redundant API calls across sessions.
 
 ## Data Sources
 
@@ -86,6 +93,8 @@ A Cloudflare Worker proxy holds third-party API keys server-side so the app bund
 | Finnhub (via Worker) | Key in Worker | Stock quotes, company profiles |
 | Alpha Vantage (via Worker) | Key in Worker | Daily price candles |
 | Google News | None | Company news (RSS) |
+| Apollo (via Worker) | Key in Worker | Daily Spark briefing |
+| Claude API | API key | AI commentary and interpretation |
 
 ## License
 
