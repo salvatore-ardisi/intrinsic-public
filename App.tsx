@@ -3,7 +3,7 @@ import { useState, useRef, useCallback, useEffect, createContext, useContext } f
 import { StatusBar } from 'expo-status-bar';
 import {
   View, Text, TouchableOpacity, TouchableWithoutFeedback,
-  Animated, Dimensions, StyleSheet,
+  Animated, Dimensions, StyleSheet, Image, Modal,
 } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import type { PanGestureHandlerStateChangeEvent } from 'react-native-gesture-handler';
@@ -86,7 +86,7 @@ const CommodityNews = createStubScreen('PHYSICAL', 'NEWS');
 function DrawerMenuButton() {
   const { toggle } = useDrawer();
   return (
-    <TouchableOpacity onPress={toggle} style={{ paddingLeft: 16, paddingRight: 12 }}>
+    <TouchableOpacity onPress={toggle} style={{ paddingLeft: 16, paddingRight: 12 }} accessibilityLabel="Open menu">
       <Ionicons name="menu" size={22} color={colors.accent} />
     </TouchableOpacity>
   );
@@ -386,6 +386,7 @@ const SECTION_COMPONENTS: Record<Section, React.ComponentType> = {
 function MainScreen() {
   const [activeSection, setActiveSection] = useState<Section>('Economy');
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [aboutVisible, setAboutVisible] = useState(false);
   const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
 
@@ -456,12 +457,38 @@ function MainScreen() {
               <Ionicons name="settings-outline" size={14} color={colors.textMuted} />
               <Text style={d.footerText}>SETTINGS</Text>
             </TouchableOpacity>
-            <TouchableOpacity activeOpacity={0.7} style={d.footerItem}>
+            <TouchableOpacity activeOpacity={0.7} style={d.footerItem} onPress={() => setAboutVisible(true)}>
               <Ionicons name="information-circle-outline" size={14} color={colors.textMuted} />
               <Text style={d.footerText}>ABOUT</Text>
             </TouchableOpacity>
           </View>
         </Animated.View>
+
+        <Modal
+          visible={aboutVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setAboutVisible(false)}
+        >
+          <TouchableWithoutFeedback onPress={() => setAboutVisible(false)}>
+            <View style={about.overlay}>
+              <TouchableWithoutFeedback>
+                <View style={about.card}>
+                  <TouchableOpacity style={about.close} onPress={() => setAboutVisible(false)}>
+                    <Ionicons name="close" size={20} color={colors.textMuted} />
+                  </TouchableOpacity>
+                  <Image source={require('./assets/icon.png')} style={about.icon} />
+                  <Text style={about.title}>INTRINSIC MOBILE</Text>
+                  <Text style={about.version}>v1.0.0</Text>
+                  <Text style={about.subtitle}>Market Intelligence Terminal</Text>
+                  <View style={about.divider} />
+                  <Text style={about.detail}>Built with Expo + React Native</Text>
+                  <Text style={about.detail}>Data: FRED, BLS, SEC EDGAR, Federal Reserve</Text>
+                </View>
+              </TouchableWithoutFeedback>
+            </View>
+          </TouchableWithoutFeedback>
+        </Modal>
       </View>
     </DrawerContext.Provider>
   );
@@ -592,5 +619,68 @@ const d = StyleSheet.create({
     fontSize: 10,
     color: colors.textMuted,
     letterSpacing: 1,
+  },
+});
+
+const about = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  card: {
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingHorizontal: 32,
+    paddingTop: 32,
+    paddingBottom: 28,
+    alignItems: 'center',
+    width: 260,
+  },
+  close: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    padding: 4,
+  },
+  icon: {
+    width: 64,
+    height: 64,
+    borderRadius: 10,
+    marginBottom: 14,
+  },
+  title: {
+    fontFamily: fonts.monoBold,
+    fontSize: 14,
+    color: '#CC6600',
+    letterSpacing: 3,
+  },
+  version: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    color: '#666666',
+    marginTop: 4,
+  },
+  subtitle: {
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    color: '#666666',
+    marginTop: 2,
+  },
+  divider: {
+    width: '80%',
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: 14,
+  },
+  detail: {
+    fontFamily: fonts.mono,
+    fontSize: 9,
+    color: '#555555',
+    textAlign: 'center',
+    lineHeight: 14,
   },
 });
