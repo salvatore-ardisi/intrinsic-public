@@ -33,6 +33,12 @@ import WatchlistScreen from './src/screens/WatchlistScreen';
 import StockDetailScreen from './src/screens/StockDetailScreen';
 import StockNewsScreen from './src/screens/StockNewsScreen';
 import { createStubScreen } from './src/components/StubScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
+import BondYieldsScreen from './src/screens/bonds/BondYieldsScreen';
+import BondCurveScreen from './src/screens/bonds/BondCurveScreen';
+import BondSpreadsScreen from './src/screens/bonds/BondSpreadsScreen';
+import BondChartsScreen from './src/screens/bonds/BondChartsScreen';
+import BondAuctionsScreen from './src/screens/bonds/BondAuctionsScreen';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -62,11 +68,6 @@ const RootStack = createNativeStackNavigator<RootStackParamList>();
 const StocksCharts = createStubScreen('EQUITIES', 'CHARTS');
 const StocksValuation = createStubScreen('EQUITIES', 'VALUATION');
 
-const BondsYields = createStubScreen('FIXED INCOME', 'YIELDS');
-const BondsCurve = createStubScreen('FIXED INCOME', 'CURVE');
-const BondsAuctions = createStubScreen('FIXED INCOME', 'AUCTIONS');
-const BondsFedComms = createStubScreen('FIXED INCOME', 'FED COMMS');
-const BondsNews = createStubScreen('FIXED INCOME', 'NEWS');
 
 const EtfScreener = createStubScreen('FUNDS', 'SCREENER');
 const EtfHoldings = createStubScreen('FUNDS', 'HOLDINGS');
@@ -312,18 +313,18 @@ function StocksTabs() {
   );
 }
 
-const BONDS_TITLES = ['YIELDS', 'CURVE', 'AUCTIONS', 'FED COMMS', 'NEWS'];
+const BONDS_TITLES = ['YIELDS', 'CURVE', 'SPREADS', 'CHARTS', 'AUCTIONS'];
 
 function BondsTabs() {
   const { tabIndex, renderTabBar } = useFloor();
   return (
     <FloorContainer titles={BONDS_TITLES} tabIndex={tabIndex}>
       <BondsTab.Navigator tabBarPosition="bottom" tabBar={renderTabBar}>
-        <BondsTab.Screen name="Yields" component={BondsYields} options={{ title: 'YIELDS', tabBarIcon: ({ color }) => <Ionicons name="trending-up" size={TAB_ICON_SIZE} color={color} /> }} />
-        <BondsTab.Screen name="Curve" component={BondsCurve} options={{ title: 'CURVE', tabBarIcon: ({ color }) => <Ionicons name="pulse-outline" size={TAB_ICON_SIZE} color={color} /> }} />
-        <BondsTab.Screen name="Auctions" component={BondsAuctions} options={{ title: 'AUCTIONS', tabBarIcon: ({ color }) => <Ionicons name="hammer-outline" size={TAB_ICON_SIZE} color={color} /> }} />
-        <BondsTab.Screen name="BondFedComms" component={BondsFedComms} options={{ title: 'FED COMMS', tabBarIcon: ({ color }) => <Ionicons name="megaphone-outline" size={TAB_ICON_SIZE} color={color} /> }} />
-        <BondsTab.Screen name="BondNews" component={BondsNews} options={{ title: 'NEWS', tabBarIcon: ({ color }) => <Ionicons name="newspaper-outline" size={TAB_ICON_SIZE} color={color} /> }} />
+        <BondsTab.Screen name="Yields" component={BondYieldsScreen} options={{ title: 'YIELDS', tabBarIcon: ({ color }) => <Ionicons name="trending-up" size={TAB_ICON_SIZE} color={color} /> }} />
+        <BondsTab.Screen name="Curve" component={BondCurveScreen} options={{ title: 'CURVE', tabBarIcon: ({ color }) => <Ionicons name="pulse-outline" size={TAB_ICON_SIZE} color={color} /> }} />
+        <BondsTab.Screen name="Spreads" component={BondSpreadsScreen} options={{ title: 'SPREADS', tabBarIcon: ({ color }) => <Ionicons name="git-compare-outline" size={TAB_ICON_SIZE} color={color} /> }} />
+        <BondsTab.Screen name="BondCharts" component={BondChartsScreen} options={{ title: 'CHARTS', tabBarIcon: ({ color }) => <Ionicons name="analytics" size={TAB_ICON_SIZE} color={color} /> }} />
+        <BondsTab.Screen name="Auctions" component={BondAuctionsScreen} options={{ title: 'AUCTIONS', tabBarIcon: ({ color }) => <Ionicons name="hammer-outline" size={TAB_ICON_SIZE} color={color} /> }} />
       </BondsTab.Navigator>
     </FloorContainer>
   );
@@ -404,7 +405,7 @@ const SECTION_COMPONENTS: Record<Section, React.ComponentType> = {
 
 type MainProps = NativeStackScreenProps<RootStackParamList, 'Main'>;
 
-function MainScreen({ route }: MainProps) {
+function MainScreen({ route, navigation: stackNav }: MainProps) {
   const initFloor = route.params?.floor as Section | undefined;
   const [activeSection, setActiveSection] = useState<Section>(
     initFloor && SECTION_COMPONENTS[initFloor] ? initFloor : 'Economy',
@@ -491,7 +492,7 @@ function MainScreen({ route }: MainProps) {
           </View>
 
           <View style={d.footer}>
-            <TouchableOpacity activeOpacity={0.7} style={d.footerItem}>
+            <TouchableOpacity activeOpacity={0.7} style={d.footerItem} onPress={() => { closeDrawer(); stackNav.navigate('Settings'); }}>
               <Ionicons name="settings-outline" size={14} color={colors.textMuted} />
               <Text style={d.footerText}>SETTINGS</Text>
             </TouchableOpacity>
@@ -561,6 +562,14 @@ export default function App() {
                 component={StockDetailScreen}
                 options={{
                   presentation: 'fullScreenModal',
+                  gestureEnabled: true,
+                  contentStyle: { backgroundColor: colors.surface },
+                }}
+              />
+              <RootStack.Screen
+                name="Settings"
+                component={SettingsScreen}
+                options={{
                   gestureEnabled: true,
                   contentStyle: { backgroundColor: colors.surface },
                 }}

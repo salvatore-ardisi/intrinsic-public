@@ -2,6 +2,7 @@ import { XMLParser } from 'fast-xml-parser';
 import {
   FRED_SERIES, BLS_SERIES, FRED_API_KEY, BLS_API_KEY,
   CATEGORY_ORDER, FED_RSS_FEEDS, NEWS_FEEDS, RESEARCH_FEEDS,
+  BOND_YIELD_SERIES, BOND_SPREAD_SERIES,
 } from '../config/series';
 import type { SeriesConfig } from '../config/series';
 import type { Indicator, CategoryGroup, FedComm, NewsItem, ResearchItem, SparkItem, YieldCurvePoint, Observation, CompanyNewsItem, SparkResponse } from './types';
@@ -636,4 +637,65 @@ export async function fetchCompanyNews(tickers: string[], force = false): Promis
 
   setCache(cacheKey, deduped);
   return deduped;
+}
+
+export async function fetchBondYields(force = false): Promise<Indicator[]> {
+  const cacheKey = 'bond_yields';
+  if (!force) {
+    const cached = getCached<Indicator[]>(cacheKey);
+    if (cached) return cached;
+  }
+
+  const results = await Promise.all(BOND_YIELD_SERIES.map(fetchFredSeries));
+  setCache(cacheKey, results);
+  return results;
+}
+
+export async function fetchBondSpreads(force = false): Promise<Indicator[]> {
+  const cacheKey = 'bond_spreads';
+  if (!force) {
+    const cached = getCached<Indicator[]>(cacheKey);
+    if (cached) return cached;
+  }
+
+  const directSeries = BOND_SPREAD_SERIES.map(fetchFredSeries);
+  const yieldSpreadPromise = Promise.all([
+    fetchFredSeries(FRED_SERIES.find(s => s.series_id === 'DGS10')!),
+    fetchFredSeries(FRED_SERIES.find(s => s.series_id === 'DGS2')!),
+  ]).then(([dgs10, dgs2]) => computeYieldSpread([dgs10, dgs2]));
+
+  const mortgageSpreadPromise = Promise.all([
+    fetchFredSeries(FRED_SERIES.find(s => s.series_id === 'MORTGAGE30US')!),
+    fetchFredSeries(FRED_SERIES.find(s => s.series_id === 'DGS10')!),
+  ]).then(([mortgage, dgs10]): Indicator => {
+    if (mortgage.value === null || dgs10.value === null) {
+      return {
+        series_id: 'MORTGAGE_SPREAD', name: 'Mortgage Spread', category: 'Credit Spreads',
+        value: null, previous: null, change: null, change_pct: null, direction: 'flat',
+        unit: '%', frequency: 'weekly', date: null, invert_sentiment: true, source: 'COMPUTED',
+        error: 'Missing data',
+      };
+    }
+    const spread = parseFloat((mortgage.value - dgs10.value).toFixed(2));
+    const prevSpread = (mortgage.previous !== null && dgs10.previous !== null)
+      ? parseFloat((mortgage.previous - dgs10.previous).toFixed(2)) : null;
+    const change = prevSpread !== null ? parseFloat((spread - prevSpread).toFixed(2)) : null;
+    const direction: Indicator['direction'] =
+      change !== null ? (change > 0 ? 'up' : change < 0 ? 'down' : 'flat') : 'flat';
+    return {
+      series_id: 'MORTGAGE_SPREAD', name: 'Mortgage Spread (30Y - 10Y)', category: 'Credit Spreads',
+      value: spread, previous: prevSpread, change, change_pct: null, direction,
+      unit: '%', frequency: 'weekly', date: mortgage.date, invert_sentiment: true, source: 'COMPUTED',
+    };
+  });
+
+  const [directResults, yieldSpread, mortgageSpread] = await Promise.all([
+    Promise.all(directSeries),
+    yieldSpreadPromise,
+    mortgageSpreadPromise,
+  ]);
+
+  const results = [yieldSpread, ...directResults, mortgageSpread];
+  setCache(cacheKey, results);
+  return results;
 }

@@ -43,5 +43,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     sparkFeedUrl: process.env.SPARK_FEED_URL || '',
     edgarUserAgent: process.env.EDGAR_USER_AGENT || '',
     priceProxyUrl: process.env.PRICE_PROXY_URL || '',
+    massiveApiKey: process.env.MASSIVE_API_KEY || '',
   },
 });
