@@ -69,7 +69,7 @@ export default function ChartsScreen() {
       <RatesTransmissionSection key={`rt-${key}`} forceExpand={expandOverrides['rates-transmission']} onLayout={y => onSectionLayout('rates-transmission', y)} />
       <YieldCurveSection key={`yc-${key}`} forceExpand={expandOverrides['yield-curve']} onLayout={y => onSectionLayout('yield-curve', y)} />
       <Text style={s.footerNote}>
-        Charts use 3 years of FRED historical data. Pull down to refresh.
+        Charts use 3-5 years of FRED historical data. Pull down to refresh.
       </Text>
     </ScrollView>
   );
@@ -108,7 +108,7 @@ function MacroPulseSection({ forceExpand, onLayout }: { forceExpand?: boolean; o
           />
           <Legend items={[{ color: colors.negative, label: 'UNEMPLOYMENT' }, { color: colors.cyan, label: 'FED FUNDS' }]} />
           <Text style={s.caption}>
-            The Fed cuts rates when unemployment rises, raises when it falls. This relationship drives the business cycle.
+            The Fed balances employment and inflation. It typically cuts rates during economic weakness and raises them to cool overheating or fight inflation.
           </Text>
           <IndicatorBadges chartId="macro-pulse" />
         </>
@@ -119,31 +119,39 @@ function MacroPulseSection({ forceExpand, onLayout }: { forceExpand?: boolean; o
 
 /* ────── B. INFLATION VS POLICY ────── */
 
+function computeYoy(raw: Observation[]): Observation[] {
+  const sorted = [...raw].sort((a, b) => a.date.localeCompare(b.date));
+  const yoy: Observation[] = [];
+  for (let i = 12; i < sorted.length; i++) {
+    const current = sorted[i];
+    const yearAgo = sorted[i - 12];
+    if (yearAgo.value > 0) {
+      yoy.push({
+        date: current.date,
+        value: parseFloat(((current.value / yearAgo.value - 1) * 100).toFixed(2)),
+      });
+    }
+  }
+  return yoy;
+}
+
 function InflationPolicySection({ forceExpand, onLayout }: { forceExpand?: boolean; onLayout: (y: number) => void }) {
   const [collapsed, setCollapsed] = useState(false);
   const [status, setStatus] = useState<Status>('loading');
   const [cpiYoy, setCpiYoy] = useState<Observation[]>([]);
+  const [pceYoy, setPceYoy] = useState<Observation[]>([]);
   const [fed, setFed] = useState<Observation[]>([]);
 
   useEffect(() => { if (forceExpand) setCollapsed(false); }, [forceExpand]);
 
   useEffect(() => {
-    Promise.all([fetchSeriesHistory('CPIAUCSL'), fetchSeriesHistory('FEDFUNDS')])
-      .then(([cpiRaw, f]) => {
-        if (cpiRaw.length < 13 || f.length < 2) { setStatus('error'); return; }
-        const yoy: Observation[] = [];
-        const sorted = [...cpiRaw].sort((a, b) => a.date.localeCompare(b.date));
-        for (let i = 12; i < sorted.length; i++) {
-          const current = sorted[i];
-          const yearAgo = sorted[i - 12];
-          if (yearAgo.value > 0) {
-            yoy.push({
-              date: current.date,
-              value: parseFloat(((current.value / yearAgo.value - 1) * 100).toFixed(2)),
-            });
-          }
-        }
-        setCpiYoy(yoy); setFed(f); setStatus('ready');
+    Promise.all([fetchSeriesHistory('CPIAUCSL'), fetchSeriesHistory('PCEPI'), fetchSeriesHistory('FEDFUNDS')])
+      .then(([cpiRaw, pceRaw, f]) => {
+        if (cpiRaw.length < 13 || pceRaw.length < 13 || f.length < 2) { setStatus('error'); return; }
+        setCpiYoy(computeYoy(cpiRaw));
+        setPceYoy(computeYoy(pceRaw));
+        setFed(f);
+        setStatus('ready');
       })
       .catch(() => setStatus('error'));
   }, []);
@@ -155,13 +163,13 @@ function InflationPolicySection({ forceExpand, onLayout }: { forceExpand?: boole
       {status === 'ready' && (
         <>
           <SingleAxisChart
-            seriesA={cpiYoy} seriesB={fed}
-            colorA={colors.negative} colorB={colors.cyan}
+            seriesA={cpiYoy} seriesB={fed} seriesC={pceYoy}
+            colorA={colors.negative} colorB={colors.cyan} colorC="#CCCC00"
             unit="%" decimals={1}
           />
-          <Legend items={[{ color: colors.negative, label: 'CPI YOY%' }, { color: colors.cyan, label: 'FED FUNDS' }]} />
+          <Legend items={[{ color: colors.negative, label: 'CPI YOY%' }, { color: '#CCCC00', label: 'PCE YOY%' }, { color: colors.cyan, label: 'FED FUNDS' }]} />
           <Text style={s.caption}>
-            When inflation (red) is above the fed funds rate (cyan), monetary policy is loose relative to prices. When the fed funds rate exceeds inflation, policy is restrictive. The Fed tightens until they cross.
+            CPI (red) is the widely cited measure. PCE (yellow) is what the Fed targets at 2%. When the fed funds rate (cyan) exceeds inflation, policy is restrictive. When inflation exceeds the rate, policy is loose.
           </Text>
           <IndicatorBadges chartId="inflation-policy" />
         </>
@@ -370,10 +378,11 @@ function DualAxisChart({ seriesA, seriesB, colorA, colorB, labelA, labelB, decim
   );
 }
 
-/* Single Y-axis chart (same scale) */
-function SingleAxisChart({ seriesA, seriesB, colorA, colorB, unit, decimals }: {
+/* Single Y-axis chart (same scale, optional third series) */
+function SingleAxisChart({ seriesA, seriesB, seriesC, colorA, colorB, colorC, unit, decimals }: {
   seriesA: Observation[]; seriesB: Observation[];
-  colorA: string; colorB: string;
+  seriesC?: Observation[];
+  colorA: string; colorB: string; colorC?: string;
   unit: string; decimals: number;
 }) {
   const screenW = Dimensions.get('window').width - 24;
@@ -383,20 +392,25 @@ function SingleAxisChart({ seriesA, seriesB, colorA, colorB, unit, decimals }: {
   const chartH = H - PAD_T - PAD_B;
 
   const { common, mapA, mapB } = buildCommonDates(seriesA, seriesB);
-  if (common.length < 2) return null;
+  const mapC: Record<string, number> = {};
+  if (seriesC) for (const o of seriesC) mapC[o.date] = o.value;
+  const filtered = seriesC ? common.filter(d => mapC[d] !== undefined) : common;
+  if (filtered.length < 2) return null;
 
-  const aVals = common.map(d => mapA[d]);
-  const bVals = common.map(d => mapB[d]);
-  const allVals = [...aVals, ...bVals];
+  const aVals = filtered.map(d => mapA[d]);
+  const bVals = filtered.map(d => mapB[d]);
+  const cVals = seriesC ? filtered.map(d => mapC[d]) : [];
+  const allVals = [...aVals, ...bVals, ...cVals];
   const minVal = Math.min(...allVals); const maxVal = Math.max(...allVals);
   const dom = padDomain(minVal, maxVal);
 
-  const toX = (i: number) => PAD_L + (i / (common.length - 1)) * chartW;
+  const toX = (i: number) => PAD_L + (i / (filtered.length - 1)) * chartW;
   const toY = (v: number) => PAD_T + chartH - ((v - dom.min) / dom.range) * chartH;
 
-  const lineA = common.map((_, i) => `${toX(i).toFixed(1)},${toY(aVals[i]).toFixed(1)}`).join(' ');
-  const lineB = common.map((_, i) => `${toX(i).toFixed(1)},${toY(bVals[i]).toFixed(1)}`).join(' ');
-  const dateLabels = makeDateLabels(common, toX);
+  const lineA = filtered.map((_, i) => `${toX(i).toFixed(1)},${toY(aVals[i]).toFixed(1)}`).join(' ');
+  const lineB = filtered.map((_, i) => `${toX(i).toFixed(1)},${toY(bVals[i]).toFixed(1)}`).join(' ');
+  const lineC = seriesC ? filtered.map((_, i) => `${toX(i).toFixed(1)},${toY(cVals[i]).toFixed(1)}`).join(' ') : null;
+  const dateLabels = makeDateLabels(filtered, toX);
 
   return (
     <View style={{ backgroundColor: '#000000' }}>
@@ -406,6 +420,7 @@ function SingleAxisChart({ seriesA, seriesB, colorA, colorB, unit, decimals }: {
         ))}
         <Polyline points={lineA} fill="none" stroke={colorA} strokeWidth="1.5" />
         <Polyline points={lineB} fill="none" stroke={colorB} strokeWidth="1.5" />
+        {lineC && colorC && <Polyline points={lineC} fill="none" stroke={colorC} strokeWidth="1.5" />}
         <SvgText x={PAD_L - 4} y={PAD_T + 3} textAnchor="end" fill="#666666" fontSize="9" fontFamily={fonts.mono!}>{dom.max.toFixed(decimals)}{unit}</SvgText>
         <SvgText x={PAD_L - 4} y={PAD_T + chartH / 2 + 3} textAnchor="end" fill="#666666" fontSize="9" fontFamily={fonts.mono!}>{((dom.max + dom.min) / 2).toFixed(decimals)}{unit}</SvgText>
         <SvgText x={PAD_L - 4} y={PAD_T + chartH + 3} textAnchor="end" fill="#666666" fontSize="9" fontFamily={fonts.mono!}>{dom.min.toFixed(decimals)}{unit}</SvgText>

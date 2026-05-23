@@ -154,7 +154,7 @@ function computeYieldSpread(fredResults: Indicator[]): Indicator {
     return {
       series_id: 'YIELD_SPREAD', name: '10Y-2Y Yield Spread', category: 'Interest Rates',
       value: null, previous: null, change: null, change_pct: null, direction: 'flat',
-      unit: '%', frequency: 'daily', date: null, invert_sentiment: true, source: 'COMPUTED',
+      unit: '%', frequency: 'daily', date: null, invert_sentiment: false, source: 'COMPUTED',
       error: 'Missing DGS10 or DGS2 data',
     };
   }
@@ -171,7 +171,7 @@ function computeYieldSpread(fredResults: Indicator[]): Indicator {
   return {
     series_id: 'YIELD_SPREAD', name: '10Y-2Y Yield Spread', category: 'Interest Rates',
     value: spread, previous: prevSpread, change, change_pct, direction,
-    unit: '%', frequency: 'daily', date: dgs10.date, invert_sentiment: true, source: 'COMPUTED',
+    unit: '%', frequency: 'daily', date: dgs10.date, invert_sentiment: false, source: 'COMPUTED',
     dgs10_value: dgs10.value, dgs2_value: dgs2.value,
   };
 }
