@@ -9,3 +9,4 @@ export const ENABLE_AI: boolean = extra.enableAi ?? false;
 export const SPARK_FEED_URL: string = extra.sparkFeedUrl ?? '';
 export const EDGAR_USER_AGENT: string = extra.edgarUserAgent || '';
 export const PRICE_PROXY_URL: string = extra.priceProxyUrl || '';
+export const MASSIVE_API_KEY: string = extra.massiveApiKey || '';

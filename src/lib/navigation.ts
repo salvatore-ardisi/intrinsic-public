@@ -25,9 +25,9 @@ export type StocksTabParamList = {
 export type BondsTabParamList = {
   Yields: undefined;
   Curve: undefined;
+  Spreads: undefined;
+  BondCharts: undefined;
   Auctions: undefined;
-  BondFedComms: undefined;
-  BondNews: undefined;
 };
 
 export type EtfsTabParamList = {

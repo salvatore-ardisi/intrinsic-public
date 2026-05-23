@@ -26,6 +26,33 @@ export const BLS_SERIES: SeriesConfig[] = [
   { series_id: 'LNS11300000', name: 'Labor Force Participation', category: 'Labor Market', unit: '%', frequency: 'monthly', invert_sentiment: false, decimals: 1, source: 'bls' },
 ];
 
+export const BOND_YIELD_SERIES: SeriesConfig[] = [
+  { series_id: 'DGS1MO', name: '1-Month Treasury', category: 'Short-Term', unit: '%', frequency: 'daily', invert_sentiment: false, decimals: 2, source: 'fred' },
+  { series_id: 'DGS3MO', name: '3-Month Treasury', category: 'Short-Term', unit: '%', frequency: 'daily', invert_sentiment: false, decimals: 2, source: 'fred' },
+  { series_id: 'DGS6MO', name: '6-Month Treasury', category: 'Short-Term', unit: '%', frequency: 'daily', invert_sentiment: false, decimals: 2, source: 'fred' },
+  { series_id: 'DGS1', name: '1-Year Treasury', category: 'Short-Term', unit: '%', frequency: 'daily', invert_sentiment: false, decimals: 2, source: 'fred' },
+  { series_id: 'DGS2', name: '2-Year Treasury', category: 'Medium-Term', unit: '%', frequency: 'daily', invert_sentiment: false, decimals: 2, source: 'fred' },
+  { series_id: 'DGS3', name: '3-Year Treasury', category: 'Medium-Term', unit: '%', frequency: 'daily', invert_sentiment: false, decimals: 2, source: 'fred' },
+  { series_id: 'DGS5', name: '5-Year Treasury', category: 'Medium-Term', unit: '%', frequency: 'daily', invert_sentiment: false, decimals: 2, source: 'fred' },
+  { series_id: 'DGS7', name: '7-Year Treasury', category: 'Medium-Term', unit: '%', frequency: 'daily', invert_sentiment: false, decimals: 2, source: 'fred' },
+  { series_id: 'DGS10', name: '10-Year Treasury', category: 'Long-Term', unit: '%', frequency: 'daily', invert_sentiment: false, decimals: 2, source: 'fred' },
+  { series_id: 'DGS20', name: '20-Year Treasury', category: 'Long-Term', unit: '%', frequency: 'daily', invert_sentiment: false, decimals: 2, source: 'fred' },
+  { series_id: 'DGS30', name: '30-Year Treasury', category: 'Long-Term', unit: '%', frequency: 'daily', invert_sentiment: false, decimals: 2, source: 'fred' },
+];
+
+export const BOND_SPREAD_SERIES: SeriesConfig[] = [
+  { series_id: 'T10Y3M', name: '10Y-3M Spread', category: 'Term Spreads', unit: '%', frequency: 'daily', invert_sentiment: false, decimals: 2, source: 'fred' },
+  { series_id: 'BAA10Y', name: 'Baa Corporate Spread', category: 'Credit Spreads', unit: '%', frequency: 'daily', invert_sentiment: true, decimals: 2, source: 'fred' },
+  { series_id: 'AAA10Y', name: 'Aaa Corporate Spread', category: 'Credit Spreads', unit: '%', frequency: 'daily', invert_sentiment: true, decimals: 2, source: 'fred' },
+  { series_id: 'DFII10', name: '10Y Real Yield (TIPS)', category: 'Real Yields', unit: '%', frequency: 'daily', invert_sentiment: false, decimals: 2, source: 'fred' },
+];
+
+export const BOND_MATURITY_LABELS: Record<string, string> = {
+  DGS1MO: '1M', DGS3MO: '3M', DGS6MO: '6M', DGS1: '1Y',
+  DGS2: '2Y', DGS3: '3Y', DGS5: '5Y', DGS7: '7Y',
+  DGS10: '10Y', DGS20: '20Y', DGS30: '30Y',
+};
+
 export const ALL_SERIES: SeriesConfig[] = [...FRED_SERIES, ...BLS_SERIES];
 
 export const CATEGORY_ORDER = ['Labor Market', 'Inflation', 'Growth', 'Interest Rates'];
@@ -91,4 +118,8 @@ export const EXPLAINERS: Record<string, string> = {
   DGS2: 'The 2-year Treasury yield reflects market expectations for Fed policy over the next two years. It moves more directly with expected Fed rate changes than the 10-year, making it a purer read on near-term monetary policy expectations.',
   MORTGAGE30US: 'The 30-year fixed mortgage rate is the average rate offered to homebuyers for a standard 30-year loan. It is the most important rate for the housing market and is closely tied to the 10-year Treasury yield.',
   YIELD_SPREAD: 'The spread between 10-year and 2-year Treasury yields is the most-discussed recession predictor in finance. When the spread goes negative (inverts), it means short-term rates exceed long-term rates - a signal that markets expect economic weakness ahead. An inverted yield curve has preceded every U.S. recession since 1955, though the lead time varies from 6 to 24 months.',
+  T10Y3M: 'The 10-year minus 3-month Treasury spread has the strongest academic backing as a recession predictor (SF Fed research). It compares long-term growth expectations against the near-term policy rate. When this spread inverts, it signals the market expects the Fed to cut rates in response to economic weakness.',
+  BAA10Y: 'The Moody\'s Baa corporate bond spread over the 10-year Treasury measures the yield premium investors demand for holding investment-grade corporate debt with higher default risk. Widening spreads signal rising credit stress and risk aversion; tightening spreads signal improving credit conditions and risk appetite.',
+  AAA10Y: 'The Moody\'s Aaa corporate bond spread over the 10-year Treasury represents the minimum credit premium for corporate debt. Because Aaa-rated bonds have negligible default risk, this spread primarily captures liquidity and flight-to-quality dynamics rather than credit risk.',
+  DFII10: 'The 10-year Treasury Inflation-Protected Securities (TIPS) yield represents the real (inflation-adjusted) return on a 10-year government bond. The gap between the nominal 10-year yield and this real yield approximates the market\'s 10-year inflation expectation (breakeven inflation rate).',
 };
