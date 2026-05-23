@@ -33,6 +33,7 @@ import WatchlistScreen from './src/screens/WatchlistScreen';
 import StockDetailScreen from './src/screens/StockDetailScreen';
 import StockNewsScreen from './src/screens/StockNewsScreen';
 import { createStubScreen } from './src/components/StubScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -404,7 +405,7 @@ const SECTION_COMPONENTS: Record<Section, React.ComponentType> = {
 
 type MainProps = NativeStackScreenProps<RootStackParamList, 'Main'>;
 
-function MainScreen({ route }: MainProps) {
+function MainScreen({ route, navigation: stackNav }: MainProps) {
   const initFloor = route.params?.floor as Section | undefined;
   const [activeSection, setActiveSection] = useState<Section>(
     initFloor && SECTION_COMPONENTS[initFloor] ? initFloor : 'Economy',
@@ -491,7 +492,7 @@ function MainScreen({ route }: MainProps) {
           </View>
 
           <View style={d.footer}>
-            <TouchableOpacity activeOpacity={0.7} style={d.footerItem}>
+            <TouchableOpacity activeOpacity={0.7} style={d.footerItem} onPress={() => { closeDrawer(); stackNav.navigate('Settings'); }}>
               <Ionicons name="settings-outline" size={14} color={colors.textMuted} />
               <Text style={d.footerText}>SETTINGS</Text>
             </TouchableOpacity>
@@ -561,6 +562,14 @@ export default function App() {
                 component={StockDetailScreen}
                 options={{
                   presentation: 'fullScreenModal',
+                  gestureEnabled: true,
+                  contentStyle: { backgroundColor: colors.surface },
+                }}
+              />
+              <RootStack.Screen
+                name="Settings"
+                component={SettingsScreen}
+                options={{
                   gestureEnabled: true,
                   contentStyle: { backgroundColor: colors.surface },
                 }}

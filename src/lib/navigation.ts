@@ -3,6 +3,7 @@ import type { NavigatorScreenParams } from '@react-navigation/native';
 export type RootStackParamList = {
   Main: { floor?: string; tab?: string; params?: Record<string, string> } | undefined;
   StockDetail: { symbol: string };
+  Settings: undefined;
 };
 
 export type EconomyTabParamList = {
