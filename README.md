@@ -4,6 +4,30 @@
 
 A mobile market intelligence app built with Expo and React Native. Dense, data-focused dark monospace interface for tracking U.S. macroeconomic indicators, equities, SEC filings, and Federal Reserve communications.
 
+## Demo
+
+<div align="center">
+  <img src="assets/demo.gif" alt="Intrinsic Mobile demo" width="350" />
+</div>
+
+## Screenshots
+
+| Indicators | Charts |
+|:---:|:---:|
+| ![Indicators](assets/screenshots/indicators.png) | ![Charts](assets/screenshots/charts.png) |
+
+| News | Daily Spark |
+|:---:|:---:|
+| ![News](assets/screenshots/news.png) | ![Daily Spark](assets/screenshots/spark.png) |
+
+| Spark AI | Macro Summary AI |
+|:---:|:---:|
+| ![Spark AI](assets/screenshots/spark-ai.png) | ![Macro Summary AI](assets/screenshots/macro-summary-ai.png) |
+
+| Watchlist | Filings |
+|:---:|:---:|
+| ![Watchlist](assets/screenshots/watchlist.png) | ![Filings](assets/screenshots/filings.png) |
+
 ## Features
 
 **Economy (live)** - FRED and BLS macro series grouped by Labor, Inflation, Growth, and Interest Rates. Sparklines, historical analysis, multi-series overlay charts, Fed RSS feeds, aggregated financial news. AI-powered Macro Summary with AsyncStorage caching by calendar date.

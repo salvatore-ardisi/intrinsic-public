@@ -358,10 +358,10 @@ function DualAxisChart({ seriesA, seriesB, colorA, colorB, labelA, labelB, decim
         ))}
         <Polyline points={lineA} fill="none" stroke={colorA} strokeWidth="1.5" />
         <Polyline points={lineB} fill="none" stroke={colorB} strokeWidth="1.5" />
-        <SvgText x={PAD_L - 4} y={toYA(aMax) + 3} textAnchor="end" fill={colorA} fontSize="9" fontFamily={fonts.mono!}>{aMax.toFixed(decimalsA)}{labelA}</SvgText>
-        <SvgText x={PAD_L - 4} y={toYA(aMin) + 3} textAnchor="end" fill={colorA} fontSize="9" fontFamily={fonts.mono!}>{aMin.toFixed(decimalsA)}{labelA}</SvgText>
-        <SvgText x={screenW - PAD_R + 4} y={toYB(bMax) + 3} textAnchor="start" fill={colorB} fontSize="9" fontFamily={fonts.mono!}>{bMax.toFixed(decimalsB)}{labelB}</SvgText>
-        <SvgText x={screenW - PAD_R + 4} y={toYB(bMin) + 3} textAnchor="start" fill={colorB} fontSize="9" fontFamily={fonts.mono!}>{bMin.toFixed(decimalsB)}{labelB}</SvgText>
+        <SvgText x={PAD_L - 4} y={PAD_T + 3} textAnchor="end" fill={colorA} fontSize="9" fontFamily={fonts.mono!}>{aDom.max.toFixed(decimalsA)}{labelA}</SvgText>
+        <SvgText x={PAD_L - 4} y={PAD_T + chartH + 3} textAnchor="end" fill={colorA} fontSize="9" fontFamily={fonts.mono!}>{aDom.min.toFixed(decimalsA)}{labelA}</SvgText>
+        <SvgText x={screenW - PAD_R + 4} y={PAD_T + 3} textAnchor="start" fill={colorB} fontSize="9" fontFamily={fonts.mono!}>{bDom.max.toFixed(decimalsB)}{labelB}</SvgText>
+        <SvgText x={screenW - PAD_R + 4} y={PAD_T + chartH + 3} textAnchor="start" fill={colorB} fontSize="9" fontFamily={fonts.mono!}>{bDom.min.toFixed(decimalsB)}{labelB}</SvgText>
         {dateLabels.map((dl, i) => (
           <SvgText key={i} x={dl.x} y={H - 4} textAnchor={i === 0 ? 'start' : i === dateLabels.length - 1 ? 'end' : 'middle'} fill="#666666" fontSize="9" fontFamily={fonts.mono!}>{dl.label}</SvgText>
         ))}
@@ -397,7 +397,6 @@ function SingleAxisChart({ seriesA, seriesB, colorA, colorB, unit, decimals }: {
   const lineA = common.map((_, i) => `${toX(i).toFixed(1)},${toY(aVals[i]).toFixed(1)}`).join(' ');
   const lineB = common.map((_, i) => `${toX(i).toFixed(1)},${toY(bVals[i]).toFixed(1)}`).join(' ');
   const dateLabels = makeDateLabels(common, toX);
-  const midVal = (maxVal + minVal) / 2;
 
   return (
     <View style={{ backgroundColor: '#000000' }}>
@@ -407,9 +406,9 @@ function SingleAxisChart({ seriesA, seriesB, colorA, colorB, unit, decimals }: {
         ))}
         <Polyline points={lineA} fill="none" stroke={colorA} strokeWidth="1.5" />
         <Polyline points={lineB} fill="none" stroke={colorB} strokeWidth="1.5" />
-        <SvgText x={PAD_L - 4} y={toY(maxVal) + 3} textAnchor="end" fill="#666666" fontSize="9" fontFamily={fonts.mono!}>{maxVal.toFixed(decimals)}{unit}</SvgText>
-        <SvgText x={PAD_L - 4} y={toY(midVal) + 3} textAnchor="end" fill="#666666" fontSize="9" fontFamily={fonts.mono!}>{midVal.toFixed(decimals)}{unit}</SvgText>
-        <SvgText x={PAD_L - 4} y={toY(minVal) + 3} textAnchor="end" fill="#666666" fontSize="9" fontFamily={fonts.mono!}>{minVal.toFixed(decimals)}{unit}</SvgText>
+        <SvgText x={PAD_L - 4} y={PAD_T + 3} textAnchor="end" fill="#666666" fontSize="9" fontFamily={fonts.mono!}>{dom.max.toFixed(decimals)}{unit}</SvgText>
+        <SvgText x={PAD_L - 4} y={PAD_T + chartH / 2 + 3} textAnchor="end" fill="#666666" fontSize="9" fontFamily={fonts.mono!}>{((dom.max + dom.min) / 2).toFixed(decimals)}{unit}</SvgText>
+        <SvgText x={PAD_L - 4} y={PAD_T + chartH + 3} textAnchor="end" fill="#666666" fontSize="9" fontFamily={fonts.mono!}>{dom.min.toFixed(decimals)}{unit}</SvgText>
         {dateLabels.map((dl, i) => (
           <SvgText key={i} x={dl.x} y={H - 4} textAnchor={i === 0 ? 'start' : i === dateLabels.length - 1 ? 'end' : 'middle'} fill="#666666" fontSize="9" fontFamily={fonts.mono!}>{dl.label}</SvgText>
         ))}
@@ -477,8 +476,8 @@ function YieldCurveChart({ data }: { data: YieldCurvePoint[] }) {
           <Line x1={PAD_L} y1={zeroY} x2={screenW - PAD_R} y2={zeroY} stroke="#555555" strokeWidth="1" strokeDasharray="4,3" />
         )}
         <Polyline points={linePoints} fill="none" stroke={colors.amber} strokeWidth="1.5" />
-        {[maxVal, (maxVal + minVal) / 2, minVal].map((val, i) => (
-          <SvgText key={i} x={PAD_L - 4} y={toY(val) + 3} textAnchor="end" fill="#666666" fontSize="9" fontFamily={fonts.mono!}>{fmtY(val)}</SvgText>
+        {[dom.max, (dom.max + dom.min) / 2, dom.min].map((val, i) => (
+          <SvgText key={i} x={PAD_L - 4} y={PAD_T + (i * chartH / 2) + 3} textAnchor="end" fill="#666666" fontSize="9" fontFamily={fonts.mono!}>{fmtY(val)}</SvgText>
         ))}
         {zeroInView && (
           <SvgText x={PAD_L - 4} y={zeroY + 3} textAnchor="end" fill="#999999" fontSize="9" fontFamily={fonts.mono!}>0.0</SvgText>
