@@ -1,6 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert,
+  View, Text, ScrollView, TouchableOpacity, TextInput,
+  StyleSheet, Alert, ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,8 +10,25 @@ import * as WebBrowser from 'expo-web-browser';
 import Constants from 'expo-constants';
 import { useNavigation } from '@react-navigation/native';
 import { colors, fonts } from '../config/theme';
+import { signUp, signIn, signOut, onAuthChanged } from '../lib/firebase';
+import type { User } from '../lib/firebase';
 
 const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
+
+function firebaseErrorMessage(code: string): string {
+  switch (code) {
+    case 'auth/invalid-email': return 'Invalid email address.';
+    case 'auth/user-disabled': return 'This account has been disabled.';
+    case 'auth/user-not-found': return 'No account found with this email.';
+    case 'auth/wrong-password': return 'Incorrect password.';
+    case 'auth/invalid-credential': return 'Incorrect email or password.';
+    case 'auth/email-already-in-use': return 'An account with this email already exists.';
+    case 'auth/weak-password': return 'Password must be at least 6 characters.';
+    case 'auth/too-many-requests': return 'Too many attempts. Try again later.';
+    case 'auth/network-request-failed': return 'Network error. Check your connection.';
+    default: return 'Something went wrong. Try again.';
+  }
+}
 
 function SectionHeader({ title }: { title: string }) {
   return <Text style={s.sectionHeader}>{title}</Text>;
@@ -38,6 +56,75 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const [cacheCleared, setCacheCleared] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [authMode, setAuthMode] = useState<'signIn' | 'signUp'>('signIn');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const unsub = onAuthChanged((u) => {
+      setUser(u);
+      setAuthLoading(false);
+    });
+    return unsub;
+  }, []);
+
+  const handleSignIn = useCallback(async () => {
+    setAuthError('');
+    if (!email.trim() || !password) {
+      setAuthError('Email and password are required.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await signIn(email.trim(), password);
+      setEmail('');
+      setPassword('');
+    } catch (e: any) {
+      setAuthError(firebaseErrorMessage(e.code));
+    } finally {
+      setSubmitting(false);
+    }
+  }, [email, password]);
+
+  const handleSignUp = useCallback(async () => {
+    setAuthError('');
+    if (!email.trim() || !password) {
+      setAuthError('Email and password are required.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setAuthError('Passwords do not match.');
+      return;
+    }
+    if (password.length < 6) {
+      setAuthError('Password must be at least 6 characters.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await signUp(email.trim(), password);
+      setEmail('');
+      setPassword('');
+      setConfirmPassword('');
+    } catch (e: any) {
+      setAuthError(firebaseErrorMessage(e.code));
+    } finally {
+      setSubmitting(false);
+    }
+  }, [email, password, confirmPassword]);
+
+  const handleSignOut = useCallback(async () => {
+    try {
+      await signOut();
+    } catch {
+      Alert.alert('Error', 'Failed to sign out');
+    }
+  }, []);
 
   const handleClearCache = useCallback(async () => {
     try {
@@ -53,6 +140,111 @@ export default function SettingsScreen() {
     WebBrowser.openBrowserAsync('https://github.com/salvatore-ardisi/intrinsic-public');
   }, []);
 
+  const renderAccountSection = () => {
+    if (authLoading) {
+      return (
+        <View style={s.authContainer}>
+          <ActivityIndicator color={colors.amber} />
+        </View>
+      );
+    }
+
+    if (user) {
+      return (
+        <>
+          <Row
+            label="SIGNED IN AS"
+            right={<Text style={s.valueText} numberOfLines={1}>{user.email}</Text>}
+          />
+          <Row
+            label="STATUS"
+            right={<Text style={s.valueText}>FREE TIER</Text>}
+          />
+          <TouchableOpacity
+            style={s.signOutBtn}
+            activeOpacity={0.6}
+            onPress={handleSignOut}
+          >
+            <Text style={s.signOutBtnText}>SIGN OUT</Text>
+          </TouchableOpacity>
+        </>
+      );
+    }
+
+    return (
+      <View style={s.authContainer}>
+        <TextInput
+          style={s.authInput}
+          value={email}
+          onChangeText={(t) => { setEmail(t); setAuthError(''); }}
+          placeholder="EMAIL"
+          placeholderTextColor={colors.textMuted}
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="email-address"
+          selectionColor={colors.accent}
+          returnKeyType="next"
+        />
+        <TextInput
+          style={s.authInput}
+          value={password}
+          onChangeText={(t) => { setPassword(t); setAuthError(''); }}
+          placeholder="PASSWORD"
+          placeholderTextColor={colors.textMuted}
+          secureTextEntry
+          selectionColor={colors.accent}
+          returnKeyType={authMode === 'signIn' ? 'go' : 'next'}
+          onSubmitEditing={authMode === 'signIn' ? handleSignIn : undefined}
+        />
+        {authMode === 'signUp' && (
+          <TextInput
+            style={s.authInput}
+            value={confirmPassword}
+            onChangeText={(t) => { setConfirmPassword(t); setAuthError(''); }}
+            placeholder="CONFIRM PASSWORD"
+            placeholderTextColor={colors.textMuted}
+            secureTextEntry
+            selectionColor={colors.accent}
+            returnKeyType="go"
+            onSubmitEditing={handleSignUp}
+          />
+        )}
+        {authError !== '' && (
+          <Text style={s.authError}>{authError}</Text>
+        )}
+        <TouchableOpacity
+          style={s.authBtn}
+          activeOpacity={0.6}
+          onPress={authMode === 'signIn' ? handleSignIn : handleSignUp}
+          disabled={submitting}
+        >
+          {submitting ? (
+            <ActivityIndicator color={colors.accent} size="small" />
+          ) : (
+            <Text style={s.authBtnText}>
+              {authMode === 'signIn' ? 'SIGN IN' : 'CREATE ACCOUNT'}
+            </Text>
+          )}
+        </TouchableOpacity>
+        <TouchableOpacity
+          activeOpacity={0.6}
+          onPress={() => {
+            setAuthMode(authMode === 'signIn' ? 'signUp' : 'signIn');
+            setAuthError('');
+            setConfirmPassword('');
+          }}
+          style={s.authToggle}
+        >
+          <Text style={s.authToggleText}>
+            {authMode === 'signIn'
+              ? "DON'T HAVE AN ACCOUNT? CREATE ONE"
+              : 'ALREADY HAVE AN ACCOUNT? SIGN IN'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   return (
     <View style={[s.container, { paddingTop: insets.top }]}>
       <View style={s.header}>
@@ -64,14 +256,7 @@ export default function SettingsScreen() {
 
       <ScrollView style={s.scroll} contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}>
         <SectionHeader title="ACCOUNT" />
-        <Row
-          label="SIGN IN / CREATE ACCOUNT"
-          right={<Text style={s.comingSoon}>COMING SOON</Text>}
-        />
-        <Row
-          label="STATUS"
-          right={<Text style={s.valueText}>FREE TIER</Text>}
-        />
+        {renderAccountSection()}
 
         <SectionHeader title="SUBSCRIPTION" />
         <View style={s.planCard}>
@@ -208,6 +393,7 @@ const s = StyleSheet.create({
     fontFamily: fonts.mono,
     fontSize: 11,
     color: colors.textMuted,
+    flexShrink: 1,
   },
   comingSoon: {
     fontFamily: fonts.mono,
@@ -220,6 +406,63 @@ const s = StyleSheet.create({
     fontSize: 10,
     color: colors.positive,
     letterSpacing: 0.5,
+  },
+  authContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  authInput: {
+    fontFamily: fonts.mono,
+    fontSize: 12,
+    color: colors.textPrimary,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    backgroundColor: colors.surfaceAlt,
+    marginBottom: 8,
+  },
+  authError: {
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    color: colors.negative,
+    marginBottom: 8,
+  },
+  authBtn: {
+    borderWidth: 1,
+    borderColor: colors.accent,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  authBtnText: {
+    fontFamily: fonts.monoSemiBold,
+    fontSize: 11,
+    color: colors.accent,
+    letterSpacing: 1,
+  },
+  authToggle: {
+    marginTop: 10,
+    alignItems: 'center',
+  },
+  authToggleText: {
+    fontFamily: fonts.mono,
+    fontSize: 9,
+    color: colors.textMuted,
+    letterSpacing: 0.5,
+  },
+  signOutBtn: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: colors.accent,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  signOutBtnText: {
+    fontFamily: fonts.monoSemiBold,
+    fontSize: 11,
+    color: colors.accent,
+    letterSpacing: 1,
   },
   planCard: {
     marginHorizontal: 16,
