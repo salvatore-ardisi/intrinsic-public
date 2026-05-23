@@ -12,9 +12,9 @@ A mobile market intelligence app built with Expo and React Native. Dense, data-f
 
 | | | |
 |---|---|---|
-| ![Indicators](assets/screenshots/indicators.png) | ![Charts](assets/screenshots/charts.png) | ![Fed Comms](assets/screenshots/fed-comms.png) |
-| ![News](assets/screenshots/news.png) | ![Research](assets/screenshots/research.png) | ![Macro Summary AI](assets/screenshots/macro-summary-ai.png) |
-| ![Watchlist](assets/screenshots/watchlist.png) | ![Filings](assets/screenshots/filings.png) | ![Stock Detail](assets/screenshots/stock-detail.png) |
+| ![Indicators](assets/screenshots/indicators.png) | ![Charts](assets/screenshots/charts.png) | ![News](assets/screenshots/news.png) |
+| ![Watchlist](assets/screenshots/watchlist.png) | ![Stock Detail](assets/screenshots/stock-detail.png) | ![Stock Charts](assets/screenshots/stock-charts.png) |
+| ![Bond Yields](assets/screenshots/bond-yields.png) | ![Filings](assets/screenshots/filings.png) | ![Valuation](assets/screenshots/valuation.png) |
 
 ## Features
 
