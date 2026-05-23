@@ -61,7 +61,7 @@ A mobile market intelligence app built with Expo and React Native. Dense, data-f
 ### Install
 
 ```bash
-git clone https://github.com/salardisi/intrinsic-public.git
+git clone https://github.com/salvatore-ardisi/intrinsic-public.git
 cd intrinsic-public
 npm install
 ```
