@@ -32,6 +32,7 @@ import FilingsScreen from './src/screens/FilingsScreen';
 import WatchlistScreen from './src/screens/WatchlistScreen';
 import StockDetailScreen from './src/screens/StockDetailScreen';
 import StockNewsScreen from './src/screens/StockNewsScreen';
+import StockChartsScreen from './src/screens/StockChartsScreen';
 import { createStubScreen } from './src/components/StubScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import BondYieldsScreen from './src/screens/bonds/BondYieldsScreen';
@@ -65,7 +66,6 @@ const CommoditiesTab = createMaterialTopTabNavigator<CommoditiesTabParamList>();
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 
-const StocksCharts = createStubScreen('EQUITIES', 'CHARTS');
 const StocksValuation = createStubScreen('EQUITIES', 'VALUATION');
 
 
@@ -304,7 +304,7 @@ function StocksTabs() {
     <FloorContainer titles={STOCKS_TITLES} tabIndex={tabIndex}>
       <StocksTab.Navigator tabBarPosition="bottom" tabBar={handleTabBarRef}>
         <StocksTab.Screen name="Watchlist" component={WatchlistScreen} options={{ title: 'WATCHLIST', tabBarIcon: ({ color }) => <Ionicons name="eye-outline" size={TAB_ICON_SIZE} color={color} /> }} />
-        <StocksTab.Screen name="StockCharts" component={StocksCharts} options={{ title: 'CHARTS', tabBarIcon: ({ color }) => <Ionicons name="stats-chart" size={TAB_ICON_SIZE} color={color} /> }} />
+        <StocksTab.Screen name="StockCharts" component={StockChartsScreen} options={{ title: 'CHARTS', tabBarIcon: ({ color }) => <Ionicons name="stats-chart" size={TAB_ICON_SIZE} color={color} /> }} />
         <StocksTab.Screen name="Filings" component={FilingsScreen} options={{ title: 'FILINGS', tabBarIcon: ({ color }) => <Ionicons name="document-text-outline" size={TAB_ICON_SIZE} color={color} /> }} />
         <StocksTab.Screen name="StockNews" component={StockNewsScreen} options={{ title: 'NEWS', tabBarIcon: ({ color }) => <Ionicons name="newspaper-outline" size={TAB_ICON_SIZE} color={color} /> }} />
         <StocksTab.Screen name="Valuation" component={StocksValuation} options={{ title: 'VALUATION', tabBarIcon: ({ color }) => <Ionicons name="calculator-outline" size={TAB_ICON_SIZE} color={color} /> }} />

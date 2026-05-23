@@ -34,7 +34,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   web: {
     favicon: './assets/favicon.png',
   },
-  plugins: ['expo-web-browser', 'expo-font'],
+  plugins: ['expo-web-browser', 'expo-font', 'expo-splash-screen', 'expo-status-bar'],
   extra: {
     fredApiKey: process.env.FRED_API_KEY || '',
     blsApiKey: process.env.BLS_API_KEY || '',
@@ -44,5 +44,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     edgarUserAgent: process.env.EDGAR_USER_AGENT || '',
     priceProxyUrl: process.env.PRICE_PROXY_URL || '',
     massiveApiKey: process.env.MASSIVE_API_KEY || '',
+    firebaseApiKey: process.env.FIREBASE_API_KEY || '',
+    firebaseAuthDomain: process.env.FIREBASE_AUTH_DOMAIN || '',
+    firebaseProjectId: process.env.FIREBASE_PROJECT_ID || '',
+    firebaseStorageBucket: process.env.FIREBASE_STORAGE_BUCKET || '',
+    firebaseMessagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || '',
+    firebaseAppId: process.env.FIREBASE_APP_ID || '',
   },
 });
