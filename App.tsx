@@ -34,6 +34,7 @@ import StockDetailScreen from './src/screens/StockDetailScreen';
 import StockNewsScreen from './src/screens/StockNewsScreen';
 import StockChartsScreen from './src/screens/StockChartsScreen';
 import { createStubScreen } from './src/components/StubScreen';
+import ValuationScreen from './src/screens/ValuationScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import BondYieldsScreen from './src/screens/bonds/BondYieldsScreen';
 import BondCurveScreen from './src/screens/bonds/BondCurveScreen';
@@ -66,7 +67,6 @@ const CommoditiesTab = createMaterialTopTabNavigator<CommoditiesTabParamList>();
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 
-const StocksValuation = createStubScreen('EQUITIES', 'VALUATION');
 
 
 const EtfScreener = createStubScreen('FUNDS', 'SCREENER');
@@ -307,7 +307,7 @@ function StocksTabs() {
         <StocksTab.Screen name="StockCharts" component={StockChartsScreen} options={{ title: 'CHARTS', tabBarIcon: ({ color }) => <Ionicons name="stats-chart" size={TAB_ICON_SIZE} color={color} /> }} />
         <StocksTab.Screen name="Filings" component={FilingsScreen} options={{ title: 'FILINGS', tabBarIcon: ({ color }) => <Ionicons name="document-text-outline" size={TAB_ICON_SIZE} color={color} /> }} />
         <StocksTab.Screen name="StockNews" component={StockNewsScreen} options={{ title: 'NEWS', tabBarIcon: ({ color }) => <Ionicons name="newspaper-outline" size={TAB_ICON_SIZE} color={color} /> }} />
-        <StocksTab.Screen name="Valuation" component={StocksValuation} options={{ title: 'VALUATION', tabBarIcon: ({ color }) => <Ionicons name="calculator-outline" size={TAB_ICON_SIZE} color={color} /> }} />
+        <StocksTab.Screen name="Valuation" component={ValuationScreen} options={{ title: 'VALUATION', tabBarIcon: ({ color }) => <Ionicons name="calculator-outline" size={TAB_ICON_SIZE} color={color} /> }} />
       </StocksTab.Navigator>
     </FloorContainer>
   );
