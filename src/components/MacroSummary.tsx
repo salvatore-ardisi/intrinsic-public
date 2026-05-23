@@ -95,6 +95,7 @@ export default function MacroSummary({ indicators }: Props) {
         onPress={() => setCollapsed(c => !c)}
         activeOpacity={0.7}
         style={s.headerRow}
+        accessibilityLabel="Toggle Macro Summary"
       >
         <View style={s.headerLeft}>
           <Text style={s.headerText}>MACRO SUMMARY</Text>

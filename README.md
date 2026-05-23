@@ -8,6 +8,10 @@
 
 A mobile market intelligence app built with Expo and React Native. Dense, data-focused dark monospace interface for tracking U.S. macroeconomic indicators, equities, SEC filings, and Federal Reserve communications.
 
+<p align="center">
+  <img src="assets/demo.gif" alt="Demo" width="350" />
+</p>
+
 ## Screenshots
 
 | | |
