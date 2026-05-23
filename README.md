@@ -14,7 +14,7 @@ A mobile market intelligence app built with Expo and React Native. Dense, data-f
 |---|---|
 | ![Indicators](assets/screenshots/indicators.png) | ![Charts](assets/screenshots/charts.png) |
 | ![News](assets/screenshots/news.png) | ![Daily Spark](assets/screenshots/spark.png) |
-| ![Spark AI](assets/screenshots/spark-ai.png) | ![Macro Summary AI](assets/screenshots/macro-summary-ai.png) |
+| ![Fed Comms](assets/screenshots/fed-comms.png) | ![Macro Summary AI](assets/screenshots/macro-summary-ai.png) |
 | ![Watchlist](assets/screenshots/watchlist.png) | ![Filings](assets/screenshots/filings.png) |
 
 ## Features
