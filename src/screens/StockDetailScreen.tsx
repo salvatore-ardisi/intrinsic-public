@@ -18,15 +18,15 @@ import type { RootStackParamList } from '../lib/navigation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'StockDetail'>;
 
-type Range = '1M' | '6M' | '1Y' | '5Y';
-const RANGES: Range[] = ['1M', '6M', '1Y', '5Y'];
+type Range = '1M' | '6M' | '1Y' | '2Y';
+const RANGES: Range[] = ['1M', '6M', '1Y', '2Y'];
 
 function rangeDays(r: Range): number {
   switch (r) {
     case '1M': return 22;
     case '6M': return 132;
     case '1Y': return 252;
-    case '5Y': return 1260;
+    case '2Y': return 504;
   }
 }
 
@@ -406,7 +406,7 @@ function CandleChart({
         </Svg>
       </View>
       <Text style={s.chartFooter}>
-        DAILY BARS · 15-MIN DELAYED · ALPHA VANTAGE
+        DAILY OHLCV · END OF DAY · MASSIVE
       </Text>
     </View>
   );
