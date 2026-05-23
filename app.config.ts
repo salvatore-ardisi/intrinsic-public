@@ -19,6 +19,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     backgroundColor: '#000000',
   },
   ios: {
+    bundleIdentifier: 'com.intrinsicmobile.app',
     supportsTablet: true,
   },
   android: {
