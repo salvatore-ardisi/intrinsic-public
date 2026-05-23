@@ -8,6 +8,7 @@ import Svg, { Polyline, Polygon, Line, Text as SvgText } from 'react-native-svg'
 import * as WebBrowser from 'expo-web-browser';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { CommonActions } from '@react-navigation/native';
 import { colors, fonts } from '../config/theme';
 import { getQuote, getProfile, getCandle } from '../lib/prices';
 import type { CandleResult } from '../lib/prices';
@@ -197,10 +198,38 @@ export default function StockDetailScreen({ route, navigation }: Props) {
           <View style={s.section}>
             <Text style={s.sectionTitle}>RELATED</Text>
             <View style={s.relatedRow}>
-              <TouchableOpacity style={s.relatedBtn} activeOpacity={0.7}>
+              <TouchableOpacity
+                style={s.relatedBtn}
+                activeOpacity={0.7}
+                onPress={() => {
+                  navigation.dispatch(
+                    CommonActions.reset({
+                      index: 0,
+                      routes: [{
+                        name: 'Main',
+                        params: { floor: 'Stocks', tab: 'Filings', params: { ticker: symbol } },
+                      }],
+                    }),
+                  );
+                }}
+              >
                 <Text style={s.relatedBtnText}>VIEW FILINGS</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={s.relatedBtn} activeOpacity={0.7}>
+              <TouchableOpacity
+                style={s.relatedBtn}
+                activeOpacity={0.7}
+                onPress={() => {
+                  navigation.dispatch(
+                    CommonActions.reset({
+                      index: 0,
+                      routes: [{
+                        name: 'Main',
+                        params: { floor: 'Stocks', tab: 'StockNews', params: { ticker: symbol } },
+                      }],
+                    }),
+                  );
+                }}
+              >
                 <Text style={s.relatedBtnText}>COMPANY NEWS</Text>
               </TouchableOpacity>
             </View>

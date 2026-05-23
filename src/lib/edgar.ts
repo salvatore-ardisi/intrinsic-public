@@ -57,8 +57,38 @@ export async function resolveCik(
   };
 }
 
-export async function getFilings(cik: string): Promise<Filing[]> {
-  const cacheKey = `edgar_filings_${cik}`;
+function parseFilingPage(
+  page: { form?: string[]; filingDate?: string[]; accessionNumber?: string[]; primaryDocument?: string[]; reportDate?: string[] },
+  cikNoZeros: string,
+): Filing[] {
+  const forms: string[] = page.form ?? [];
+  const dates: string[] = page.filingDate ?? [];
+  const accessions: string[] = page.accessionNumber ?? [];
+  const docs: string[] = page.primaryDocument ?? [];
+  const reportDates: string[] = page.reportDate ?? [];
+
+  const count = Math.min(forms.length, dates.length, accessions.length, docs.length);
+  const filings: Filing[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const accNoDashes = accessions[i].replace(/-/g, '');
+    filings.push({
+      form: forms[i].trim(),
+      filingDate: dates[i],
+      accessionNumber: accessions[i],
+      primaryDocument: docs[i],
+      reportDate: reportDates[i] ?? '',
+      documentUrl: `https://www.sec.gov/Archives/edgar/data/${cikNoZeros}/${accNoDashes}/${docs[i]}`,
+    });
+  }
+
+  return filings;
+}
+
+export async function getFilings(cik: string, targetYear?: number): Promise<Filing[]> {
+  const cacheKey = targetYear
+    ? `edgar_filings_${cik}_${targetYear}`
+    : `edgar_filings_${cik}`;
   const cached = getCached<Filing[]>(cacheKey, SUBMISSIONS_TTL);
   if (cached) return cached;
 
@@ -72,25 +102,24 @@ export async function getFilings(cik: string): Promise<Filing[]> {
   if (!recent) return [];
 
   const cikNoZeros = String(parseInt(cik, 10));
-  const forms: string[] = recent.form ?? [];
-  const dates: string[] = recent.filingDate ?? [];
-  const accessions: string[] = recent.accessionNumber ?? [];
-  const docs: string[] = recent.primaryDocument ?? [];
-  const reportDates: string[] = recent.reportDate ?? [];
+  const filings = parseFilingPage(recent, cikNoZeros);
 
-  const count = Math.min(forms.length, dates.length, accessions.length, docs.length);
-  const filings: Filing[] = [];
+  if (targetYear && !filings.some(f => f.filingDate.startsWith(String(targetYear)))) {
+    const additionalFiles: { name: string }[] = json?.filings?.files ?? [];
+    for (const file of additionalFiles) {
+      const pageResp = await edgarFetch(
+        `https://data.sec.gov/submissions/${file.name}`,
+      );
+      if (!pageResp.ok) continue;
+      const pageJson = await pageResp.json();
+      const pageFilings = parseFilingPage(pageJson, cikNoZeros);
+      filings.push(...pageFilings);
 
-  for (let i = 0; i < count; i++) {
-    const accNoDashes = accessions[i].replace(/-/g, '');
-    filings.push({
-      form: forms[i],
-      filingDate: dates[i],
-      accessionNumber: accessions[i],
-      primaryDocument: docs[i],
-      reportDate: reportDates[i] ?? '',
-      documentUrl: `https://www.sec.gov/Archives/edgar/data/${cikNoZeros}/${accNoDashes}/${docs[i]}`,
-    });
+      const hasTarget = pageFilings.some(f => f.filingDate.startsWith(String(targetYear)));
+      const oldestDate = pageFilings[pageFilings.length - 1]?.filingDate ?? '';
+      const oldestYear = parseInt(oldestDate.slice(0, 4), 10);
+      if (hasTarget && oldestYear < targetYear) break;
+    }
   }
 
   setCache(cacheKey, filings);

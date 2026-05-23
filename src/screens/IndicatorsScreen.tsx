@@ -203,16 +203,7 @@ export default function IndicatorsScreen() {
         />
       )}
       ListHeaderComponent={
-        <View>
-          <MacroSummary indicators={allIndicators} />
-          <View style={s.statusBar}>
-            <Text style={s.statusText}>
-              {categories.reduce((s, c) => s + c.indicators.length, 0)} SERIES
-            </Text>
-            <Text style={s.statusSep}>|</Text>
-            <Text style={s.statusText}>SOURCES: FRED + BLS</Text>
-          </View>
-        </View>
+        <MacroSummary indicators={allIndicators} />
       }
     />
   );
@@ -608,12 +599,6 @@ function DetailSection({ indicator }: { indicator: Indicator }) {
 const s = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.surface },
   list: { flex: 1, backgroundColor: colors.surface },
-  statusBar: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6,
-    backgroundColor: colors.surfaceAlt, borderBottomWidth: 1, borderBottomColor: colors.border,
-  },
-  statusText: { fontFamily: fonts.mono, fontSize: 10, color: colors.textMuted },
-  statusSep: { fontFamily: fonts.mono, fontSize: 10, color: colors.border, marginHorizontal: 6 },
   sectionHeader: {
     paddingHorizontal: 12, paddingVertical: 6,
     backgroundColor: colors.surfaceAlt, borderTopWidth: 1, borderTopColor: colors.border,

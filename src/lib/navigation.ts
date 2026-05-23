@@ -1,7 +1,7 @@
 import type { NavigatorScreenParams } from '@react-navigation/native';
 
 export type RootStackParamList = {
-  Main: undefined;
+  Main: { floor?: string; tab?: string; params?: Record<string, string> } | undefined;
   StockDetail: { symbol: string };
 };
 
@@ -16,8 +16,8 @@ export type EconomyTabParamList = {
 export type StocksTabParamList = {
   Watchlist: undefined;
   StockCharts: undefined;
-  Filings: undefined;
-  StockNews: undefined;
+  Filings: { ticker?: string } | undefined;
+  StockNews: { ticker?: string } | undefined;
   Valuation: undefined;
 };
 

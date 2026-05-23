@@ -4,32 +4,33 @@
 
 <h1 align="center">Intrinsic Mobile</h1>
 
-![License: GPL-3.0](https://img.shields.io/badge/License-GPL%203.0-blue.svg) ![Platform: iOS](https://img.shields.io/badge/Platform-iOS-lightgrey.svg) ![Expo SDK 54](https://img.shields.io/badge/Expo_SDK-54-000020.svg) ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6.svg) ![Cloudflare Workers](https://img.shields.io/badge/Proxy-Cloudflare_Workers-F38020.svg) ![Claude API](https://img.shields.io/badge/AI-Claude_API-D97757.svg) ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
+![License: GPL-3.0](https://img.shields.io/badge/License-GPL%203.0-blue.svg) ![Platform: iOS](https://img.shields.io/badge/Platform-iOS-lightgrey.svg) ![Expo SDK 54](https://img.shields.io/badge/Expo_SDK-54-000020.svg) ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6.svg) ![Cloudflare Workers](https://img.shields.io/badge/Proxy-Cloudflare_Workers-F38020.svg) ![Claude API](https://img.shields.io/badge/AI-Claude_API-D97757.svg)
 
 A mobile market intelligence app built with Expo and React Native. Dense, data-focused dark monospace interface for tracking U.S. macroeconomic indicators, equities, SEC filings, and Federal Reserve communications.
 
-<p align="center">
-  <img src="assets/demo.gif" alt="Demo" width="350" />
-</p>
-
 ## Screenshots
 
-| | |
-|---|---|
-| ![Indicators](assets/screenshots/indicators.png) | ![Charts](assets/screenshots/charts.png) |
-| ![News](assets/screenshots/news.png) | ![Daily Spark](assets/screenshots/spark.png) |
-| ![Fed Comms](assets/screenshots/fed-comms.png) | ![Macro Summary AI](assets/screenshots/macro-summary-ai.png) |
-| ![Watchlist](assets/screenshots/watchlist.png) | ![Filings](assets/screenshots/filings.png) |
+| | | |
+|---|---|---|
+| ![Indicators](assets/screenshots/indicators.png) | ![Charts](assets/screenshots/charts.png) | ![Fed Comms](assets/screenshots/fed-comms.png) |
+| ![News](assets/screenshots/news.png) | ![Research](assets/screenshots/research.png) | ![Macro Summary AI](assets/screenshots/macro-summary-ai.png) |
+| ![Filings](assets/screenshots/filings.png) | ![Stock Detail](assets/screenshots/stock-detail.png) | |
 
 ## Features
 
-**Economy (live)** - FRED and BLS macro series grouped by Labor, Inflation, Growth, and Interest Rates. Sparklines, historical analysis, multi-series overlay charts, Fed RSS feeds, aggregated financial news. AI-powered Macro Summary with AsyncStorage caching by calendar date.
+**Economy** - FRED and BLS macro series grouped by Labor, Inflation, Growth, and Interest Rates. Sparklines, historical analysis, multi-series overlay charts. AI-powered Macro Summary via Claude API with AsyncStorage caching by calendar date.
 
-**Daily Spark (live)** - Apollo Chief Economist daily briefing fetched from a Cloudflare Worker proxy endpoint. Displays title, body, sources, and inline chart image. AI interpretation via Claude API with AsyncStorage caching by email date.
+**Fed Comms** - Federal Reserve press releases, FOMC statements, meeting minutes, and speeches via RSS. Filter chips for FOMC, Minutes, Speeches, and Other.
 
-**Stocks (live)** - Watchlist with live quotes and company profiles. Stock detail with daily charts. SEC EDGAR filing search. Company news via Google News RSS driven by the watchlist.
+**News** - Aggregated financial news with category filters (Labor, Inflation, Fed, Growth, Rates). Daily Spark briefing from Apollo Chief Economist with AI interpretation.
 
-**Filings (live)** - Watchlist-driven SEC EDGAR filing feed. Filing type reference card on the empty state.
+**Research** - FRED Blog posts and BLS reports with series tag badges. Filter by source type.
+
+**Stocks** - Watchlist with live quotes and company profiles via Finnhub. Stock detail modal with price charts, fundamentals, and deep links to filings and company news.
+
+**Filings** - SEC EDGAR search by ticker, year, and form type. Supports all filing years back to 1993 with automatic pagination of EDGAR submission archives. Collapsible filing type reference card.
+
+**Company News** - Google News RSS feed driven by the watchlist. Filter by individual ticker or view all.
 
 **Bonds, ETFs, Futures, Commodities** - Navigation and tab structures are defined and ready for implementation.
 

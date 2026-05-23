@@ -72,12 +72,10 @@ export const RESEARCH_FEEDS = [
 ];
 
 export const NEWS_FEEDS = [
-  { name: 'CNBC', url: 'https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114' },
+  { name: 'CNBC', url: 'https://www.cnbc.com/id/20910258/device/rss/rss.html' },
   { name: 'Bloomberg', url: 'https://feeds.bloomberg.com/markets/news.rss' },
-  { name: 'MarketWatch', url: 'https://feeds.marketwatch.com/marketwatch/topstories' },
   { name: 'FT', url: 'https://www.ft.com/markets?format=rss' },
   { name: 'Yahoo Finance', url: 'https://feeds.finance.yahoo.com/rss/2906723' },
-  { name: 'AP', url: 'https://rsshub.app/apnews/topics/business' },
 ];
 
 export const EXPLAINERS: Record<string, string> = {

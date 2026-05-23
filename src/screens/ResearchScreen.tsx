@@ -81,26 +81,16 @@ export default function ResearchScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.amber} colors={[colors.amber]} progressBackgroundColor={colors.surface} />
       }
       ListHeaderComponent={
-        <View>
-          <View style={s.filterRow}>
-            {activeFilters.map(f => (
-              <TouchableOpacity
-                key={f}
-                onPress={() => setFilter(f)}
-                style={[s.filterBtn, filter === f && s.filterActive]}
-              >
-                <Text style={[s.filterText, filter === f && s.filterActiveText]}>{f}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <View style={s.statusBar}>
-            <Text style={s.statusText}>{filtered.length} ARTICLES</Text>
-            <Text style={s.statusSep}>|</Text>
-            <Text style={s.statusText}>
-              {sparkItems.length > 0 ? 'FRED BLOG + BLS + SPARK' : 'FRED BLOG + BLS'}
-            </Text>
-          </View>
+        <View style={s.filterRow}>
+          {activeFilters.map(f => (
+            <TouchableOpacity
+              key={f}
+              onPress={() => setFilter(f)}
+              style={[s.filterBtn, filter === f && s.filterActive]}
+            >
+              <Text style={[s.filterText, filter === f && s.filterActiveText]}>{f}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
       }
       renderItem={({ item }) => (
@@ -203,12 +193,6 @@ const s = StyleSheet.create({
   filterActive: { borderColor: colors.accent, backgroundColor: colors.accent },
   filterText: { fontFamily: fonts.monoBold, fontSize: 9, color: colors.textMuted },
   filterActiveText: { color: colors.surface },
-  statusBar: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6,
-    backgroundColor: colors.surfaceAlt, borderBottomWidth: 1, borderBottomColor: colors.border,
-  },
-  statusText: { fontFamily: fonts.mono, fontSize: 10, color: colors.textMuted },
-  statusSep: { fontFamily: fonts.mono, fontSize: 10, color: colors.border, marginHorizontal: 6 },
   row: {
     paddingHorizontal: 12, paddingVertical: 10,
     borderBottomWidth: 1, borderBottomColor: colors.borderSubtle,

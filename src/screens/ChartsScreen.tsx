@@ -108,7 +108,7 @@ function MacroPulseSection({ forceExpand, onLayout }: { forceExpand?: boolean; o
           />
           <Legend items={[{ color: colors.negative, label: 'UNEMPLOYMENT' }, { color: colors.cyan, label: 'FED FUNDS' }]} />
           <Text style={s.caption}>
-            The Fed balances employment and inflation. It typically cuts rates during economic weakness and raises them to cool overheating or fight inflation.
+            Visualizes the Fed's dual mandate in action. The Fed targets maximum employment and stable prices - when unemployment rises, the FOMC typically eases policy; when the labor market tightens, it leans restrictive. This is the core dynamic behind the Taylor Rule.
           </Text>
           <IndicatorBadges chartId="macro-pulse" />
         </>
@@ -169,7 +169,7 @@ function InflationPolicySection({ forceExpand, onLayout }: { forceExpand?: boole
           />
           <Legend items={[{ color: colors.negative, label: 'CPI YOY%' }, { color: '#CCCC00', label: 'PCE YOY%' }, { color: colors.cyan, label: 'FED FUNDS' }]} />
           <Text style={s.caption}>
-            CPI (red) is the widely cited measure. PCE (yellow) is what the Fed targets at 2%. When the fed funds rate (cyan) exceeds inflation, policy is restrictive. When inflation exceeds the rate, policy is loose.
+            CPI and PCE measure realized inflation; the fed funds rate is the Fed's primary tool to control it. When the real rate (fed funds minus inflation) is positive, policy is restrictive. When negative, policy is accommodative. The Fed targets 2% PCE inflation.
           </Text>
           <IndicatorBadges chartId="inflation-policy" />
         </>
@@ -210,7 +210,7 @@ function RatesTransmissionSection({ forceExpand, onLayout }: { forceExpand?: boo
           />
           <Legend items={[{ color: colors.cyan, label: '10Y TREASURY' }, { color: colors.amber, label: '30Y MORTGAGE' }]} />
           <Text style={s.caption}>
-            The spread between the 10-year Treasury and 30-year mortgage rate reflects credit market conditions. A widening spread signals tighter lending; a narrowing spread signals easing.
+            The spread between the 10-year Treasury yield and the 30-year mortgage rate reflects credit risk and liquidity premiums in the mortgage market. A widening spread signals tighter lending conditions; a narrowing spread signals easing. This is a key channel of monetary policy transmission to the real economy.
           </Text>
           <IndicatorBadges chartId="rates-transmission" />
         </>
@@ -242,7 +242,7 @@ function YieldCurveSection({ forceExpand, onLayout }: { forceExpand?: boolean; o
         <>
           <YieldCurveChart data={data} />
           <Text style={s.caption}>
-            Negative values (red) indicate yield curve inversion. Every U.S. recession since 1955 has been preceded by an inversion.
+            Negative values (red) indicate yield curve inversion. Nearly every U.S. recession since 1955 has been preceded by an inversion of the 2Y/10Y spread, though the lead time varies from 6 to 24 months.
           </Text>
           <IndicatorBadges chartId="yield-curve" />
         </>

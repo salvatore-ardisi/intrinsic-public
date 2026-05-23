@@ -397,6 +397,7 @@ export async function fetchNews(force = false): Promise<NewsItem[]> {
           link: (item.link || '').toString().trim(),
           date: parseRssDate(item.pubDate || item.published || item.updated || ''),
           source: feed.name,
+          description: (item.description || item.summary || '').toString().trim() || undefined,
         });
       }
     } catch { /* skip failed feeds */ }

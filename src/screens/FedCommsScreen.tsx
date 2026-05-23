@@ -20,11 +20,23 @@ const TYPE_COLORS: Record<string, string> = {
   OTHER: colors.textMuted,
 };
 
+type CommsFilter = 'ALL' | 'FOMC' | 'MINUTES' | 'SPEECHES' | 'OTHER';
+const COMMS_FILTERS: CommsFilter[] = ['ALL', 'FOMC', 'MINUTES', 'SPEECHES', 'OTHER'];
+
+function matchesCommsFilter(item: FedComm, filter: CommsFilter): boolean {
+  if (filter === 'ALL') return true;
+  if (filter === 'FOMC') return item.type === 'FOMC';
+  if (filter === 'MINUTES') return item.type === 'MINUTES';
+  if (filter === 'SPEECHES') return item.type === 'SPEECH';
+  return item.type !== 'FOMC' && item.type !== 'MINUTES' && item.type !== 'SPEECH';
+}
+
 export default function FedCommsScreen() {
   const [items, setItems] = useState<FedComm[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [filter, setFilter] = useState<CommsFilter>('ALL');
 
   const load = useCallback(async (force = false) => {
     try {
@@ -44,6 +56,11 @@ export default function FedCommsScreen() {
     setRefreshing(false);
   }, [load]);
 
+  const filtered = useMemo(() => {
+    if (filter === 'ALL') return items;
+    return items.filter(item => matchesCommsFilter(item, filter));
+  }, [items, filter]);
+
   if (loading) {
     return (
       <View style={s.center}>
@@ -54,17 +71,23 @@ export default function FedCommsScreen() {
 
   return (
     <FlatList
-      data={items}
+      data={filtered}
       keyExtractor={(_, i) => String(i)}
       style={s.list}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.amber} colors={[colors.amber]} progressBackgroundColor={colors.surface} />
       }
       ListHeaderComponent={
-        <View style={s.statusBar}>
-          <Text style={s.statusText}>{items.length} ITEMS</Text>
-          <Text style={s.statusSep}>|</Text>
-          <Text style={s.statusText}>SOURCE: FEDERAL RESERVE RSS</Text>
+        <View style={s.filterRow}>
+          {COMMS_FILTERS.map(f => (
+            <TouchableOpacity
+              key={f}
+              onPress={() => setFilter(f)}
+              style={[s.filterBtn, filter === f && s.filterActive]}
+            >
+              <Text style={[s.filterText, filter === f && s.filterActiveText]}>{f}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
       }
       renderItem={({ item }) => (
@@ -139,12 +162,18 @@ function formatFedDate(dateStr: string): string {
 const s = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.surface },
   list: { flex: 1, backgroundColor: colors.surface },
-  statusBar: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6,
-    backgroundColor: colors.surfaceAlt, borderBottomWidth: 1, borderBottomColor: colors.border,
+  filterRow: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: 6,
+    paddingHorizontal: 12, paddingVertical: 8,
+    borderBottomWidth: 1, borderBottomColor: colors.border,
   },
-  statusText: { fontFamily: fonts.mono, fontSize: 10, color: colors.textMuted },
-  statusSep: { fontFamily: fonts.mono, fontSize: 10, color: colors.border, marginHorizontal: 6 },
+  filterBtn: {
+    borderWidth: 1, borderColor: colors.border,
+    paddingHorizontal: 8, paddingVertical: 3,
+  },
+  filterActive: { borderColor: colors.accent, backgroundColor: colors.accent },
+  filterText: { fontFamily: fonts.monoBold, fontSize: 9, color: colors.textMuted },
+  filterActiveText: { color: colors.surface },
   row: {
     paddingHorizontal: 12, paddingVertical: 10,
     borderBottomWidth: 1, borderBottomColor: colors.borderSubtle,

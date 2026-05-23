@@ -21,6 +21,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     bundleIdentifier: 'com.intrinsicmobile.app',
     supportsTablet: true,
+    infoPlist: {
+      LSApplicationCategoryType: 'public.app-category.finance',
+    },
   },
   android: {
     adaptiveIcon: {

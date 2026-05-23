@@ -1,14 +1,17 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, RefreshControl,
   StyleSheet, ActivityIndicator,
 } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
 import { colors, fonts } from '../config/theme';
 import { fetchCompanyNews } from '../lib/api';
+import CompanyPicker from '../components/CompanyPicker';
 import type { CompanyNewsItem } from '../lib/types';
+import type { StocksTabParamList } from '../lib/navigation';
 
 const STORAGE_KEY = 'watchlist_tickers';
 
@@ -28,29 +31,35 @@ function formatRelativeTime(dateStr: string): string {
 
 export default function StockNewsScreen() {
   const navigation = useNavigation();
+  const route = useRoute<RouteProp<StocksTabParamList, 'StockNews'>>();
+  const paramTicker = route.params?.ticker;
   const [items, setItems] = useState<CompanyNewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [emptyWatchlist, setEmptyWatchlist] = useState(false);
+  const [tickers, setTickers] = useState<string[]>([]);
+  const [selectedCompany, setSelectedCompany] = useState<string>(paramTicker?.toUpperCase() ?? 'ALL');
 
   const load = useCallback(async (force = false) => {
-    let tickers: string[] = [];
+    let wlTickers: string[] = [];
     try {
       const raw = await AsyncStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) tickers = parsed;
+        if (Array.isArray(parsed)) wlTickers = parsed;
       }
     } catch {}
 
-    if (tickers.length === 0) {
+    if (wlTickers.length === 0) {
       setEmptyWatchlist(true);
       setItems([]);
+      setTickers([]);
       return;
     }
     setEmptyWatchlist(false);
+    setTickers(wlTickers.map(t => t.toUpperCase()));
 
-    const data = await fetchCompanyNews(tickers, force);
+    const data = await fetchCompanyNews(wlTickers, force);
     setItems(data);
   }, []);
 
@@ -63,11 +72,22 @@ export default function StockNewsScreen() {
     return unsub;
   }, [navigation, load]);
 
+  useEffect(() => {
+    if (paramTicker) setSelectedCompany(paramTicker.toUpperCase());
+  }, [paramTicker]);
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await load(true);
     setRefreshing(false);
   }, [load]);
+
+  const filtered = useMemo(() => {
+    if (selectedCompany === 'ALL') return items;
+    return items.filter(item =>
+      item.ticker.split(',').includes(selectedCompany),
+    );
+  }, [items, selectedCompany]);
 
   if (loading) {
     return (
@@ -87,7 +107,7 @@ export default function StockNewsScreen() {
 
   return (
     <FlatList
-      data={items}
+      data={filtered}
       keyExtractor={(item, i) => `${item.link}_${i}`}
       style={s.list}
       refreshControl={
@@ -100,10 +120,8 @@ export default function StockNewsScreen() {
         />
       }
       ListHeaderComponent={
-        <View style={s.statusBar}>
-          <Text style={s.statusText}>{items.length} ARTICLES</Text>
-          <Text style={s.statusSep}>|</Text>
-          <Text style={s.statusText}>WATCHLIST NEWS</Text>
+        <View style={s.pickerWrap}>
+          <CompanyPicker tickers={tickers} selected={selectedCompany} onSelect={setSelectedCompany} />
         </View>
       }
       ListEmptyComponent={
@@ -149,13 +167,7 @@ const s = StyleSheet.create({
   list: { flex: 1, backgroundColor: colors.surface },
   emptyText: { fontFamily: fonts.mono, fontSize: 10, color: colors.textMuted, letterSpacing: 1, textAlign: 'center', paddingHorizontal: 24 },
   emptyWrap: { paddingTop: 40, alignItems: 'center' },
-
-  statusBar: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6,
-    backgroundColor: colors.surfaceAlt, borderBottomWidth: 1, borderBottomColor: colors.border,
-  },
-  statusText: { fontFamily: fonts.mono, fontSize: 10, color: colors.textMuted },
-  statusSep: { fontFamily: fonts.mono, fontSize: 10, color: colors.border, marginHorizontal: 6 },
+  pickerWrap: { paddingHorizontal: 12, marginTop: 8, marginBottom: 6 },
 
   row: {
     paddingHorizontal: 12,
