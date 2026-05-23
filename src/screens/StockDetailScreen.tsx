@@ -10,7 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { CommonActions } from '@react-navigation/native';
 import { colors, fonts } from '../config/theme';
-import { getQuote, getProfile, getCandle } from '../lib/prices';
+import { getQuote, getProfile, getCandle, calculateBeta } from '../lib/prices';
 import type { CandleResult } from '../lib/prices';
 import { getTickerDetails, getRelatedTickers, getDividends } from '../lib/massive';
 import { fetchCompanyFacts, extractLatestMetrics } from '../lib/xbrl';
@@ -51,6 +51,7 @@ export default function StockDetailScreen({ route, navigation }: Props) {
   const [relatedTickers, setRelatedTickers] = useState<string[]>([]);
   const [dividends, setDividends] = useState<Dividend[]>([]);
   const [xbrlMetrics, setXbrlMetrics] = useState<LatestMetrics | null>(null);
+  const [beta, setBeta] = useState<number | null>(null);
   const [descExpanded, setDescExpanded] = useState(false);
   const [range, setRange] = useState<Range>('1Y');
   const [loading, setLoading] = useState(true);
@@ -82,6 +83,16 @@ export default function StockDetailScreen({ route, navigation }: Props) {
       const factsResult = await fetchCompanyFacts(symbol);
       if (!cancelled && factsResult) {
         setXbrlMetrics(extractLatestMetrics(factsResult.facts));
+      }
+
+      if (c && c.status === 'ok') {
+        try {
+          const spyResult = await getCandle('SPY');
+          if (!cancelled && spyResult.status === 'ok') {
+            const b = calculateBeta(c.candle, spyResult.candle);
+            setBeta(b);
+          }
+        } catch {}
       }
     })();
     return () => { cancelled = true; };
@@ -271,6 +282,11 @@ export default function StockDetailScreen({ route, navigation }: Props) {
                     : '-'
                 }
                 muted={xbrlMetrics?.epsDiluted == null}
+              />
+              <GridCell
+                label="BETA"
+                value={beta != null ? beta.toFixed(2) : '-'}
+                muted={beta == null}
               />
             </View>
           </View>

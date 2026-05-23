@@ -74,6 +74,37 @@ export async function getCandle(symbol: string): Promise<CandleResult> {
   }
 }
 
+export function calculateBeta(stockCandles: Candle, marketCandles: Candle): number | null {
+  const stockCloses = stockCandles.c;
+  const marketCloses = marketCandles.c;
+  const len = Math.min(stockCloses.length, marketCloses.length);
+  if (len < 31) return null;
+
+  const stockReturns: number[] = [];
+  const marketReturns: number[] = [];
+  for (let i = 1; i < len; i++) {
+    stockReturns.push((stockCloses[i] - stockCloses[i - 1]) / stockCloses[i - 1]);
+    marketReturns.push((marketCloses[i] - marketCloses[i - 1]) / marketCloses[i - 1]);
+  }
+
+  const n = stockReturns.length;
+  let sumS = 0, sumM = 0;
+  for (let i = 0; i < n; i++) { sumS += stockReturns[i]; sumM += marketReturns[i]; }
+  const meanS = sumS / n;
+  const meanM = sumM / n;
+
+  let cov = 0, varM = 0;
+  for (let i = 0; i < n; i++) {
+    const ds = stockReturns[i] - meanS;
+    const dm = marketReturns[i] - meanM;
+    cov += ds * dm;
+    varM += dm * dm;
+  }
+
+  if (varM === 0) return null;
+  return Math.round((cov / varM) * 100) / 100;
+}
+
 export async function getProfile(symbol: string): Promise<StockProfile | null> {
   const upper = symbol.toUpperCase();
   const cacheKey = `profile_${upper}`;
