@@ -8,9 +8,10 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, fonts } from '../config/theme';
 import { getQuote, getProfile } from '../lib/prices';
+import { getMarketMovers } from '../lib/massive';
 import { loadTickerMap } from '../lib/edgar';
 import TickerAutocomplete from '../components/TickerAutocomplete';
-import type { Quote, TickerEntry } from '../lib/types';
+import type { Quote, TickerEntry, MarketMover } from '../lib/types';
 import type { RootStackParamList } from '../lib/navigation';
 
 const STORAGE_KEY = 'watchlist_tickers';
@@ -53,6 +54,13 @@ export default function WatchlistScreen() {
   const profileCache = useRef<Record<string, string>>({});
   const tickerMapRef = useRef<Record<string, TickerEntry> | null>(null);
   const [suggestions, setSuggestions] = useState<TickerEntry[]>([]);
+  const [movers, setMovers] = useState<MarketMover[]>([]);
+  const [moversDir, setMoversDir] = useState<'gainers' | 'losers'>('gainers');
+  const [moversCollapsed, setMoversCollapsed] = useState(false);
+
+  useEffect(() => {
+    getMarketMovers(moversDir).then(setMovers).catch(() => {});
+  }, [moversDir]);
 
   useEffect(() => {
     loadTickerMap()
@@ -216,6 +224,61 @@ export default function WatchlistScreen() {
         }}
       />
 
+      {/* Market Movers */}
+      {movers.length > 0 && <View style={s.moversCard}>
+        <TouchableOpacity
+          style={s.moversHeader}
+          activeOpacity={0.7}
+          onPress={() => setMoversCollapsed(v => !v)}
+        >
+          <Text style={s.moversTitle}>MARKET MOVERS</Text>
+          <Text style={s.moversChevron}>{moversCollapsed ? '+' : '-'}</Text>
+        </TouchableOpacity>
+        {!moversCollapsed && (
+          <>
+            <View style={s.moversToggle}>
+              <TouchableOpacity
+                style={[s.moversTab, moversDir === 'gainers' && s.moversTabActive]}
+                activeOpacity={0.7}
+                onPress={() => setMoversDir('gainers')}
+              >
+                <Text style={[s.moversTabText, moversDir === 'gainers' && s.moversTabTextActive]}>GAINERS</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.moversTab, moversDir === 'losers' && s.moversTabActive]}
+                activeOpacity={0.7}
+                onPress={() => setMoversDir('losers')}
+              >
+                <Text style={[s.moversTabText, moversDir === 'losers' && s.moversTabTextActive]}>LOSERS</Text>
+              </TouchableOpacity>
+            </View>
+            {movers.slice(0, 5).map(m => (
+              <TouchableOpacity
+                key={m.ticker}
+                style={s.moverRow}
+                activeOpacity={0.7}
+                onPress={() => openDetail(m.ticker)}
+              >
+                <Text style={s.moverTicker}>{m.ticker}</Text>
+                <View style={s.moverRight}>
+                  <Text style={s.moverPrice}>
+                    {m.price != null ? m.price.toFixed(2) : '-'}
+                  </Text>
+                  <Text style={[
+                    s.moverChange,
+                    { color: (m.change_percent ?? 0) >= 0 ? colors.positive : colors.negative },
+                  ]}>
+                    {m.change_percent != null
+                      ? `${m.change_percent >= 0 ? '+' : ''}${m.change_percent.toFixed(2)}%`
+                      : '-'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </>
+        )}
+      </View>}
+
       {items.length === 0 ? (
         <View style={s.center}>
           <Text style={s.prompt}>ADD A TICKER TO START YOUR WATCHLIST</Text>
@@ -357,4 +420,59 @@ const s = StyleSheet.create({
     borderColor: colors.border,
   },
   deleteText: { fontFamily: fonts.mono, fontSize: 11, color: colors.textMuted },
+
+  moversCard: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  moversHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: colors.surfaceAlt,
+  },
+  moversTitle: {
+    fontFamily: fonts.monoBold,
+    fontSize: 10,
+    color: colors.accent,
+    letterSpacing: 1,
+  },
+  moversChevron: {
+    fontFamily: fonts.monoBold,
+    fontSize: 14,
+    color: colors.textMuted,
+  },
+  moversToggle: {
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    gap: 8,
+  },
+  moversTab: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  moversTabActive: {
+    borderColor: colors.accent,
+    backgroundColor: '#1a1000',
+  },
+  moversTabText: { fontFamily: fonts.mono, fontSize: 9, color: colors.textMuted },
+  moversTabTextActive: { color: colors.accent },
+  moverRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderSubtle,
+  },
+  moverTicker: { fontFamily: fonts.monoBold, fontSize: 11, color: colors.accent },
+  moverRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  moverPrice: { fontFamily: fonts.mono, fontSize: 11, color: colors.textPrimary },
+  moverChange: { fontFamily: fonts.mono, fontSize: 10, minWidth: 60, textAlign: 'right' },
 });

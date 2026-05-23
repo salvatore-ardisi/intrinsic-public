@@ -12,7 +12,8 @@ import { CommonActions } from '@react-navigation/native';
 import { colors, fonts } from '../config/theme';
 import { getQuote, getProfile, getCandle } from '../lib/prices';
 import type { CandleResult } from '../lib/prices';
-import type { Quote, StockProfile } from '../lib/types';
+import { getTickerDetails, getRelatedTickers, getDividends } from '../lib/massive';
+import type { Quote, StockProfile, TickerDetails, Dividend } from '../lib/types';
 import { padDomain } from '../lib/chartUtils';
 import type { RootStackParamList } from '../lib/navigation';
 
@@ -44,6 +45,10 @@ export default function StockDetailScreen({ route, navigation }: Props) {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [profile, setProfile] = useState<StockProfile | null>(null);
   const [candleResult, setCandleResult] = useState<CandleResult | null>(null);
+  const [tickerDetails, setTickerDetails] = useState<TickerDetails | null>(null);
+  const [relatedTickers, setRelatedTickers] = useState<string[]>([]);
+  const [dividends, setDividends] = useState<Dividend[]>([]);
+  const [descExpanded, setDescExpanded] = useState(false);
   const [range, setRange] = useState<Range>('1Y');
   const [loading, setLoading] = useState(true);
 
@@ -60,6 +65,16 @@ export default function StockDetailScreen({ route, navigation }: Props) {
       setProfile(p);
       setCandleResult(c);
       setLoading(false);
+
+      // Stagger Massive calls to respect 5/min rate limit
+      const td = await getTickerDetails(symbol);
+      if (!cancelled) setTickerDetails(td);
+
+      const rel = await getRelatedTickers(symbol);
+      if (!cancelled) setRelatedTickers(rel);
+
+      const div = await getDividends(symbol);
+      if (!cancelled) setDividends(div);
     })();
     return () => { cancelled = true; };
   }, [symbol]);
@@ -81,6 +96,31 @@ export default function StockDetailScreen({ route, navigation }: Props) {
     ? q.d > 0 ? colors.positive : q.d < 0 ? colors.negative : colors.textMuted
     : colors.textMuted;
   const chartColor = q && q.d >= 0 ? colors.positive : colors.negative;
+
+  const weekRange52 = useMemo(() => {
+    if (!candleResult || candleResult.status !== 'ok') return null;
+    const { candle } = candleResult;
+    const days252 = Math.max(0, candle.l.length - 252);
+    const lows = candle.l.slice(days252);
+    const highs = candle.h.slice(days252);
+    if (lows.length === 0) return null;
+    const lo = Math.min(...lows);
+    const hi = Math.max(...highs);
+    return `${lo.toFixed(2)} - ${hi.toFixed(2)}`;
+  }, [candleResult]);
+
+  const dividendDisplay = useMemo(() => {
+    if (dividends.length === 0) return '-';
+    const latest = dividends[0];
+    if (!latest.cash_amount) return '-';
+    const freqMap: Record<number, string> = { 1: 'ANNUAL', 2: 'SEMI-ANNUAL', 4: 'QUARTERLY', 12: 'MONTHLY' };
+    const freqLabel = latest.frequency ? freqMap[latest.frequency] ?? '' : '';
+    return `$${latest.cash_amount.toFixed(2)}${freqLabel ? ' ' + freqLabel : ''}`;
+  }, [dividends]);
+
+  const displayIndustry = tickerDetails?.sic_description ?? profile?.finnhubIndustry ?? '-';
+  const displayDescription = tickerDetails?.description ?? null;
+  const displayWebsite = tickerDetails?.homepage_url ?? profile?.weburl ?? null;
 
   return (
     <View style={[s.root, { paddingTop: insets.top }]}>
@@ -163,34 +203,51 @@ export default function StockDetailScreen({ route, navigation }: Props) {
           <View style={s.section}>
             <Text style={s.sectionTitle}>PROFILE</Text>
             <View style={s.grid}>
-              <GridCell label="EXCHANGE" value={profile?.exchange ?? '—'} />
-              <GridCell label="INDUSTRY" value={profile?.finnhubIndustry ?? '—'} />
-              <GridCell label="IPO DATE" value={profile?.ipo ?? '—'} />
-              {profile?.weburl ? (
+              <GridCell label="EXCHANGE" value={tickerDetails?.primary_exchange ?? profile?.exchange ?? '-'} />
+              <GridCell label="INDUSTRY" value={displayIndustry} />
+              <GridCell label="IPO DATE" value={tickerDetails?.list_date ?? profile?.ipo ?? '-'} />
+              {displayWebsite ? (
                 <TouchableOpacity
                   style={s.gridCell}
                   activeOpacity={0.7}
-                  onPress={() => WebBrowser.openBrowserAsync(profile.weburl)}
+                  onPress={() => WebBrowser.openBrowserAsync(displayWebsite)}
                 >
                   <Text style={s.gridLabel}>WEBSITE</Text>
                   <Text style={[s.gridValue, { color: colors.accent }]} numberOfLines={1}>
-                    {profile.weburl.replace(/^https?:\/\//, '')}
+                    {displayWebsite.replace(/^https?:\/\//, '')}
                   </Text>
                 </TouchableOpacity>
               ) : (
-                <GridCell label="WEBSITE" value="—" />
+                <GridCell label="WEBSITE" value="-" />
               )}
             </View>
+            {displayDescription && (
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => setDescExpanded(v => !v)}
+                style={s.descContainer}
+              >
+                <Text
+                  style={s.descText}
+                  numberOfLines={descExpanded ? undefined : 3}
+                >
+                  {displayDescription}
+                </Text>
+                <Text style={s.descMore}>
+                  {descExpanded ? 'LESS' : 'MORE'}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
 
-          {/* NOT ON FREE TIER */}
+          {/* FUNDAMENTALS */}
           <View style={s.section}>
-            <Text style={[s.sectionTitle, { color: colors.textMuted }]}>NOT ON FREE TIER</Text>
+            <Text style={s.sectionTitle}>FUNDAMENTALS</Text>
             <View style={s.grid}>
-              <GridCell label="P/E · EPS" value="—" muted />
-              <GridCell label="DIVIDEND" value="—" muted />
-              <GridCell label="52W RANGE" value="—" muted />
-              <GridCell label="BETA" value="—" muted />
+              <GridCell label="52W RANGE" value={weekRange52 ?? '-'} />
+              <GridCell label="DIVIDEND" value={dividendDisplay} />
+              <GridCell label="P/E" value="-" muted />
+              <GridCell label="EPS" value="-" muted />
             </View>
           </View>
 
@@ -234,6 +291,25 @@ export default function StockDetailScreen({ route, navigation }: Props) {
               </TouchableOpacity>
             </View>
           </View>
+
+          {/* PEERS */}
+          {relatedTickers.length > 0 && (
+            <View style={s.section}>
+              <Text style={s.sectionTitle}>PEERS</Text>
+              <View style={s.peersRow}>
+                {relatedTickers.slice(0, 5).map(t => (
+                  <TouchableOpacity
+                    key={t}
+                    style={s.peerBadge}
+                    activeOpacity={0.7}
+                    onPress={() => navigation.push('StockDetail', { symbol: t })}
+                  >
+                    <Text style={s.peerBadgeText}>{t}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
 
           {/* REMOVE */}
           <View style={[s.section, { marginBottom: insets.bottom + 20 }]}>
@@ -511,6 +587,19 @@ const s = StyleSheet.create({
   },
   gridLabel: { fontFamily: fonts.mono, fontSize: 9, color: colors.textMuted, letterSpacing: 0.5 },
   gridValue: { fontFamily: fonts.monoBold, fontSize: 12, color: colors.textPrimary, marginTop: 1 },
+
+  descContainer: { marginTop: 8 },
+  descText: { fontFamily: fonts.mono, fontSize: 10, color: colors.textMuted, lineHeight: 15 },
+  descMore: { fontFamily: fonts.monoBold, fontSize: 9, color: colors.accent, marginTop: 4, letterSpacing: 0.5 },
+
+  peersRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  peerBadge: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  peerBadgeText: { fontFamily: fonts.monoBold, fontSize: 10, color: colors.accent },
 
   relatedRow: { flexDirection: 'row', gap: 8 },
   relatedBtn: {
