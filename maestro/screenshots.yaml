@@ -1,0 +1,97 @@
+appId: host.exp.Exponent
+---
+
+# Open the app via deep link
+- openLink: exp://127.0.0.1:8081
+
+# Wait for app to load
+- extendedWaitUntil:
+    visible: "Continue|INDICATORS|CHARTS|NEWS|FED COMMS|WATCHLIST|INTRINSIC|FILINGS"
+    timeout: 30000
+
+# Dismiss Expo welcome if present
+- runFlow:
+    when:
+      visible: "Continue"
+    commands:
+      - tapOn: "Continue"
+      - extendedWaitUntil:
+          visible: "INDICATORS"
+          timeout: 30000
+
+# Navigate to Economy floor via drawer
+- tapOn:
+    point: "6%,10%"
+- extendedWaitUntil:
+    visible: ".*ECONOMY"
+    timeout: 5000
+- tapOn: ".*ECONOMY"
+- extendedWaitUntil:
+    visible: "INDICATORS"
+    timeout: 10000
+
+# Swipe right to ensure we're on Indicators tab
+- swipe:
+    direction: RIGHT
+- swipe:
+    direction: RIGHT
+- swipe:
+    direction: RIGHT
+- swipe:
+    direction: RIGHT
+- extendedWaitUntil:
+    visible: "INDICATORS"
+    timeout: 5000
+
+# Wait for data to load
+- extendedWaitUntil:
+    visible: "Unemployment Rate|LABOR MARKET"
+    timeout: 10000
+- takeScreenshot: assets/screenshots/indicators
+
+# Charts tab
+- swipe:
+    direction: LEFT
+- extendedWaitUntil:
+    visible: "CHARTS"
+    timeout: 5000
+- takeScreenshot: assets/screenshots/charts
+
+# News tab (skip Fed Comms)
+- swipe:
+    direction: LEFT
+- swipe:
+    direction: LEFT
+- extendedWaitUntil:
+    visible: "NEWS"
+    timeout: 5000
+- takeScreenshot: assets/screenshots/news
+
+# Expand Daily Spark
+- tapOn: "Toggle Daily Spark"
+- extendedWaitUntil:
+    visible: ".*"
+    timeout: 3000
+- takeScreenshot: assets/screenshots/spark
+
+# Open drawer and go to Stocks
+- tapOn:
+    point: "6%,10%"
+- extendedWaitUntil:
+    visible: ".*STOCKS"
+    timeout: 5000
+- tapOn: ".*STOCKS"
+- extendedWaitUntil:
+    visible: "WATCHLIST"
+    timeout: 10000
+- takeScreenshot: assets/screenshots/watchlist
+
+# Filings tab
+- swipe:
+    direction: LEFT
+- swipe:
+    direction: LEFT
+- extendedWaitUntil:
+    visible: "FILINGS"
+    timeout: 5000
+- takeScreenshot: assets/screenshots/filings

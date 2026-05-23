@@ -134,6 +134,7 @@ const DailySpark = forwardRef<DailySparkHandle>(function DailySpark(_props, ref)
         onPress={() => setExpanded(e => !e)}
         activeOpacity={0.7}
         style={s.headerRow}
+        accessibilityLabel="Toggle Daily Spark"
       >
         <View style={s.headerLeft}>
           <Text style={s.headerText}>DAILY SPARK</Text>
