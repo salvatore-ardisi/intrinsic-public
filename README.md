@@ -8,27 +8,14 @@
 
 A mobile market intelligence app built with Expo and React Native. Dense, data-focused dark monospace interface for tracking U.S. macroeconomic indicators, equities, SEC filings, and Federal Reserve communications.
 
-<p align="center">
-  <img src="assets/demo.gif" alt="Demo" width="350" />
-</p>
-
 ## Screenshots
 
-| Indicators | Charts |
-|:---:|:---:|
+| | |
+|---|---|
 | ![Indicators](assets/screenshots/indicators.png) | ![Charts](assets/screenshots/charts.png) |
-
-| News | Daily Spark |
-|:---:|:---:|
 | ![News](assets/screenshots/news.png) | ![Daily Spark](assets/screenshots/spark.png) |
-
-| Watchlist | Filings |
-|:---:|:---:|
+| ![Spark AI](assets/screenshots/spark-ai.png) | ![Macro Summary AI](assets/screenshots/macro-summary-ai.png) |
 | ![Watchlist](assets/screenshots/watchlist.png) | ![Filings](assets/screenshots/filings.png) |
-
-| Macro Summary AI |
-|:---:|
-| ![Macro Summary AI](assets/screenshots/macro-summary-ai.png) |
 
 ## Features
 
