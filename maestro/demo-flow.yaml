@@ -1,0 +1,176 @@
+appId: host.exp.Exponent
+---
+
+# Open the app via deep link
+- openLink: exp://127.0.0.1:8081
+
+# Wait for app to load
+- extendedWaitUntil:
+    visible: "Continue|INDICATORS|CHARTS|NEWS|FED COMMS|WATCHLIST|INTRINSIC|FILINGS|PROFILE|TODAY"
+    timeout: 30000
+
+# Dismiss stock detail if open
+- runFlow:
+    when:
+      visible: "PROFILE"
+    commands:
+      - tapOn:
+          point: "6%,10%"
+      - extendedWaitUntil:
+          visible: "WATCHLIST|INDICATORS|CHARTS|NEWS|INTRINSIC"
+          timeout: 5000
+
+# Dismiss Expo welcome if present
+- runFlow:
+    when:
+      visible: "Continue"
+    commands:
+      - tapOn: "Continue"
+      - extendedWaitUntil:
+          visible: "INDICATORS"
+          timeout: 30000
+
+# Close drawer if open
+- runFlow:
+    when:
+      visible: "INTRINSIC"
+    commands:
+      - tapOn:
+          point: "90%,50%"
+      - extendedWaitUntil:
+          visible: "INDICATORS|CHARTS|NEWS|FED COMMS|WATCHLIST"
+          timeout: 5000
+
+# Navigate to Economy floor via drawer
+- tapOn:
+    point: "6%,10%"
+- extendedWaitUntil:
+    visible: ".*ECONOMY"
+    timeout: 5000
+- tapOn: ".*ECONOMY"
+- extendedWaitUntil:
+    visible: "INDICATORS|CHARTS|NEWS|FED COMMS|RESEARCH"
+    timeout: 10000
+
+# Swipe right to ensure we're on Indicators tab
+- swipe:
+    direction: RIGHT
+- swipe:
+    direction: RIGHT
+- swipe:
+    direction: RIGHT
+- swipe:
+    direction: RIGHT
+- extendedWaitUntil:
+    visible: "INDICATORS"
+    timeout: 5000
+
+# Wait for data to load
+- extendedWaitUntil:
+    visible: "Unemployment Rate|LABOR MARKET"
+    timeout: 10000
+
+# Pause 2s on Indicators (safe no-op swipe in header area)
+- swipe:
+    start: "50%,6%"
+    end: "50%,6%"
+    duration: 2000
+
+# Tap Macro Summary to expand
+- tapOn: "Toggle Macro Summary"
+- swipe:
+    start: "50%,6%"
+    end: "50%,6%"
+    duration: 3000
+
+# Tap Macro Summary to collapse
+- tapOn: "Toggle Macro Summary"
+- swipe:
+    start: "50%,6%"
+    end: "50%,6%"
+    duration: 1000
+
+# Swipe left to Charts
+- swipe:
+    direction: LEFT
+- extendedWaitUntil:
+    visible: "CHARTS"
+    timeout: 5000
+- swipe:
+    start: "50%,6%"
+    end: "50%,6%"
+    duration: 2000
+
+# Swipe left twice to News (skip Fed Comms)
+- swipe:
+    direction: LEFT
+- swipe:
+    direction: LEFT
+- extendedWaitUntil:
+    visible: "NEWS"
+    timeout: 5000
+- swipe:
+    start: "50%,6%"
+    end: "50%,6%"
+    duration: 1000
+
+# Tap Daily Spark to expand
+- tapOn: "Toggle Daily Spark"
+- swipe:
+    start: "50%,6%"
+    end: "50%,6%"
+    duration: 3000
+
+# Scroll up to reveal Daily Spark header, then collapse
+- swipe:
+    direction: DOWN
+- swipe:
+    start: "50%,6%"
+    end: "50%,6%"
+    duration: 500
+- tapOn: "Toggle Daily Spark"
+- swipe:
+    start: "50%,6%"
+    end: "50%,6%"
+    duration: 1000
+
+# Open drawer and go to Stocks
+- tapOn:
+    point: "6%,10%"
+- extendedWaitUntil:
+    visible: ".*STOCKS"
+    timeout: 5000
+- tapOn: ".*STOCKS"
+- extendedWaitUntil:
+    visible: "WATCHLIST"
+    timeout: 10000
+
+# Pause 2s on Watchlist
+- swipe:
+    start: "50%,6%"
+    end: "50%,6%"
+    duration: 2000
+
+# Swipe left to Filings
+- swipe:
+    direction: LEFT
+- swipe:
+    direction: LEFT
+- extendedWaitUntil:
+    visible: "FILINGS"
+    timeout: 5000
+- swipe:
+    start: "50%,6%"
+    end: "50%,6%"
+    duration: 2000
+
+# Swipe left to News
+- swipe:
+    direction: LEFT
+- extendedWaitUntil:
+    visible: "NEWS"
+    timeout: 5000
+- swipe:
+    start: "50%,6%"
+    end: "50%,6%"
+    duration: 2000
