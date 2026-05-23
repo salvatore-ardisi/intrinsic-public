@@ -4,23 +4,21 @@ import {
   StyleSheet, ActivityIndicator, Keyboard, RefreshControl,
 } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
 import { colors, fonts } from '../config/theme';
+import DropdownPicker from '../components/DropdownPicker';
+import TickerAutocomplete from '../components/TickerAutocomplete';
 import { resolveCik, getFilings, loadTickerMap } from '../lib/edgar';
 import type { Filing, TickerEntry } from '../lib/types';
+import type { StocksTabParamList } from '../lib/navigation';
 
-const STORAGE_KEY = 'watchlist_tickers';
-const WATCHLIST_FILINGS_LIMIT = 25;
+const CURRENT_YEAR = new Date().getFullYear();
 
-type Filter = 'ALL' | '10-K' | '10-Q' | '8-K';
-const FILTERS: Filter[] = ['ALL', '10-K', '10-Q', '8-K'];
-
-type Status = 'idle' | 'loading' | 'ready' | 'not-found' | 'error';
-
-interface WatchlistFiling extends Filing {
-  ticker: string;
-  companyName: string;
-}
+const FORM_OPTIONS = [
+  '10-K', '10-Q', '8-K', 'DEF 14A', 'FORM 4',
+  'S-1', '13F', 'SC 13D', 'PROXY', '20-F',
+];
 
 const FILING_TYPES: { form: string; desc: string }[] = [
   { form: '10-K', desc: 'Annual report. Full-year financials, risk factors, business overview.' },
@@ -29,28 +27,29 @@ const FILING_TYPES: { form: string; desc: string }[] = [
   { form: 'DEF 14A', desc: 'Proxy statement. Executive comp, board nominees, shareholder votes.' },
   { form: 'S-1', desc: 'IPO registration. Pre-IPO financials, business model, risk factors.' },
   { form: '13F', desc: 'Institutional holdings. Quarterly snapshot of large fund positions.' },
-  { form: '4', desc: 'Insider transactions. Officer/director buys and sells within 2 days.' },
-  { form: 'SC 13D/G', desc: 'Large stake disclosure. Filed when someone crosses 5% ownership.' },
+  { form: 'FORM 4', desc: 'Insider transactions. Officer/director buys and sells within 2 days.' },
+  { form: 'SC 13D', desc: 'Large stake disclosure. Filed when someone crosses 5% ownership.' },
+  { form: 'PROXY', desc: 'Alias for DEF 14A. Proxy statement for shareholder meetings.' },
+  { form: '20-F', desc: 'Foreign filer annual report. Equivalent of 10-K for non-US companies.' },
 ];
 
-const wfCache: { data: WatchlistFiling[]; ts: number; key: string } = { data: [], ts: 0, key: '' };
-const WF_CACHE_TTL = 15 * 60 * 1000;
+type Status = 'idle' | 'loading' | 'ready' | 'not-found' | 'error';
 
 export default function FilingsScreen() {
+  const route = useRoute<RouteProp<StocksTabParamList, 'Filings'>>();
+  const paramTicker = route.params?.ticker;
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<Status>('idle');
   const [filings, setFilings] = useState<Filing[]>([]);
   const [companyName, setCompanyName] = useState('');
   const [searchedTicker, setSearchedTicker] = useState('');
-  const [filter, setFilter] = useState<Filter>('ALL');
+  const [yearInput, setYearInput] = useState('');
+  const [selectedForm, setSelectedForm] = useState('ALL');
   const [suggestions, setSuggestions] = useState<TickerEntry[]>([]);
-  const tickerMapRef = useRef<Record<string, TickerEntry> | null>(null);
-
-  const [wfItems, setWfItems] = useState<WatchlistFiling[]>([]);
-  const [wfLoading, setWfLoading] = useState(true);
-  const [wfEmpty, setWfEmpty] = useState(false);
-  const [wfRefreshing, setWfRefreshing] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [refExpanded, setRefExpanded] = useState(false);
+  const tickerMapRef = useRef<Record<string, TickerEntry> | null>(null);
+  const appliedParamRef = useRef<string | null>(null);
 
   useEffect(() => {
     loadTickerMap()
@@ -58,64 +57,28 @@ export default function FilingsScreen() {
       .catch(() => {});
   }, []);
 
-  const loadWatchlistFilings = useCallback(async (force = false) => {
-    let tickers: string[] = [];
-    try {
-      const raw = await AsyncStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) tickers = parsed;
+  const parsedYear = yearInput.length === 4 ? parseInt(yearInput, 10) : null;
+  const validYear = parsedYear && parsedYear >= 1993 && parsedYear <= CURRENT_YEAR
+    ? parsedYear : null;
+
+  const filtered = useMemo(() => {
+    let items = filings;
+    if (validYear) {
+      items = items.filter(f => f.filingDate.startsWith(String(validYear)));
+    }
+    if (selectedForm !== 'ALL') {
+      if (selectedForm === 'PROXY') {
+        items = items.filter(f => f.form === 'DEF 14A');
+      } else if (selectedForm === 'FORM 4') {
+        items = items.filter(f => f.form === '4' || f.form === 'FORM 4');
+      } else if (selectedForm === 'SC 13D') {
+        items = items.filter(f => f.form.startsWith('SC 13D') || f.form.startsWith('SC 13G'));
+      } else {
+        items = items.filter(f => f.form === selectedForm);
       }
-    } catch {}
-
-    if (tickers.length === 0) {
-      setWfEmpty(true);
-      setWfItems([]);
-      return;
     }
-    setWfEmpty(false);
-
-    const cacheKey = tickers.map(t => t.toUpperCase()).sort().join(',');
-    if (!force && wfCache.key === cacheKey && Date.now() - wfCache.ts < WF_CACHE_TTL) {
-      setWfItems(wfCache.data);
-      return;
-    }
-
-    const results = await Promise.allSettled(
-      tickers.map(async (ticker): Promise<WatchlistFiling[]> => {
-        const resolved = await resolveCik(ticker);
-        if (!resolved) return [];
-        const tickerFilings = await getFilings(resolved.cik);
-        return tickerFilings.map(f => ({
-          ...f,
-          ticker: ticker.toUpperCase(),
-          companyName: resolved.title,
-        }));
-      }),
-    );
-
-    const merged: WatchlistFiling[] = [];
-    for (const r of results) {
-      if (r.status === 'fulfilled') merged.push(...r.value);
-    }
-    merged.sort((a, b) => b.filingDate.localeCompare(a.filingDate));
-    const limited = merged.slice(0, WATCHLIST_FILINGS_LIMIT);
-
-    wfCache.data = limited;
-    wfCache.ts = Date.now();
-    wfCache.key = cacheKey;
-    setWfItems(limited);
-  }, []);
-
-  useEffect(() => {
-    loadWatchlistFilings().finally(() => setWfLoading(false));
-  }, [loadWatchlistFilings]);
-
-  const onWfRefresh = useCallback(async () => {
-    setWfRefreshing(true);
-    await loadWatchlistFilings(true);
-    setWfRefreshing(false);
-  }, [loadWatchlistFilings]);
+    return items;
+  }, [filings, validYear, selectedForm]);
 
   const search = useCallback(async (ticker: string) => {
     const clean = ticker.trim().toUpperCase();
@@ -123,7 +86,6 @@ export default function FilingsScreen() {
     Keyboard.dismiss();
     setSuggestions([]);
     setStatus('loading');
-    setFilter('ALL');
     setSearchedTicker(clean);
 
     try {
@@ -135,24 +97,41 @@ export default function FilingsScreen() {
         return;
       }
       setCompanyName(resolved.title);
-      const results = await getFilings(resolved.cik);
-      setFilings(results);
-      setStatus(results.length > 0 ? 'ready' : 'not-found');
+      const results = await getFilings(resolved.cik, validYear ?? undefined);
+
+      const trimmed = validYear
+        ? results
+        : results.filter(f => {
+            const y = parseInt(f.filingDate.slice(0, 4), 10);
+            return y >= CURRENT_YEAR - 1;
+          });
+
+      setFilings(trimmed);
+      setStatus(trimmed.length > 0 ? 'ready' : 'not-found');
     } catch {
       setStatus('error');
       setFilings([]);
       setCompanyName('');
     }
-  }, []);
+  }, [validYear]);
+
+  useEffect(() => {
+    if (paramTicker && paramTicker !== appliedParamRef.current) {
+      appliedParamRef.current = paramTicker;
+      setQuery(paramTicker);
+      search(paramTicker);
+    }
+  }, [paramTicker, search]);
+
+  const onRefresh = useCallback(async () => {
+    if (!searchedTicker) return;
+    setRefreshing(true);
+    await search(searchedTicker);
+    setRefreshing(false);
+  }, [searchedTicker, search]);
 
   const onChangeText = useCallback((text: string) => {
     setQuery(text);
-    if (text.trim() === '' && status !== 'idle') {
-      setStatus('idle');
-      setFilings([]);
-      setCompanyName('');
-      setSearchedTicker('');
-    }
     const upper = text.trim().toUpperCase();
     if (upper.length < 1 || !tickerMapRef.current) {
       setSuggestions([]);
@@ -170,12 +149,45 @@ export default function FilingsScreen() {
       }
     }
     setSuggestions(matches);
-  }, [status]);
+  }, []);
 
-  const filtered = useMemo(() => {
-    if (filter === 'ALL') return filings;
-    return filings.filter(f => f.form === filter);
-  }, [filings, filter]);
+  const onSelectTicker = useCallback((entry: TickerEntry) => {
+    setQuery(entry.ticker);
+    setSuggestions([]);
+  }, []);
+
+  const header = (
+    <View>
+      <View style={s.pickerRow}>
+        <TextInput
+          style={s.yearInput}
+          value={yearInput}
+          onChangeText={t => setYearInput(t.replace(/[^0-9]/g, ''))}
+          placeholder="YEAR"
+          placeholderTextColor={colors.textMuted}
+          keyboardType="number-pad"
+          maxLength={4}
+          selectionColor={colors.accent}
+          returnKeyType="done"
+        />
+        <DropdownPicker
+          items={FORM_OPTIONS}
+          selected={selectedForm}
+          onSelect={setSelectedForm}
+          allLabel="ALL FORMS"
+          title="SELECT FORM TYPE"
+        />
+      </View>
+      <TouchableOpacity
+        onPress={() => search(query)}
+        style={s.bigSearchBtn}
+        activeOpacity={0.7}
+      >
+        <Text style={s.bigSearchText}>SEARCH</Text>
+      </TouchableOpacity>
+      <ReferenceCard expanded={refExpanded} onToggle={() => setRefExpanded(e => !e)} />
+    </View>
+  );
 
   return (
     <View style={s.container}>
@@ -192,63 +204,51 @@ export default function FilingsScreen() {
           returnKeyType="search"
           selectionColor={colors.accent}
         />
-        <TouchableOpacity onPress={() => search(query)} style={s.searchBtn} activeOpacity={0.7}>
-          <Text style={s.searchBtnText}>SEARCH</Text>
-        </TouchableOpacity>
       </View>
 
-      {suggestions.length > 0 && (
-        <View style={s.suggestions}>
-          {suggestions.map(entry => (
-            <TouchableOpacity
-              key={entry.ticker}
-              style={s.suggestionRow}
-              activeOpacity={0.7}
-              onPress={() => {
-                setQuery(entry.ticker);
-                setSuggestions([]);
-                search(entry.ticker);
-              }}
-            >
-              <Text style={s.suggestionTicker}>{entry.ticker}</Text>
-              <Text style={s.suggestionName} numberOfLines={1}>{entry.title}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+      <TickerAutocomplete
+        suggestions={suggestions}
+        onSelect={onSelectTicker}
+      />
+
+      {status === 'loading' && (
+        <>
+          {header}
+          <View style={s.center}>
+            <ActivityIndicator color={colors.amber} />
+            <Text style={s.loadingText}>FETCHING FILINGS...</Text>
+          </View>
+        </>
       )}
 
       {status === 'idle' && (
-        <IdleContent
-          wfItems={wfItems}
-          wfLoading={wfLoading}
-          wfEmpty={wfEmpty}
-          wfRefreshing={wfRefreshing}
-          onRefresh={onWfRefresh}
-          refExpanded={refExpanded}
-          onToggleRef={() => setRefExpanded(e => !e)}
+        <FlatList
+          data={[]}
+          keyExtractor={() => ''}
+          renderItem={() => null}
+          ListHeaderComponent={header}
         />
       )}
 
-      {status === 'loading' && (
-        <View style={s.center}>
-          <ActivityIndicator color={colors.amber} />
-          <Text style={s.loadingText}>FETCHING FILINGS...</Text>
-        </View>
-      )}
-
       {status === 'not-found' && (
-        <View style={s.center}>
-          <Text style={s.errorText}>NO FILINGS FOUND FOR {searchedTicker}</Text>
-        </View>
+        <>
+          {header}
+          <View style={s.center}>
+            <Text style={s.errorText}>NO FILINGS FOUND FOR {searchedTicker}</Text>
+          </View>
+        </>
       )}
 
       {status === 'error' && (
-        <View style={s.center}>
-          <Text style={s.errorText}>NETWORK ERROR</Text>
-          <TouchableOpacity onPress={() => search(searchedTicker)} style={s.retryBtn} activeOpacity={0.7}>
-            <Text style={s.retryText}>RETRY</Text>
-          </TouchableOpacity>
-        </View>
+        <>
+          {header}
+          <View style={s.center}>
+            <Text style={s.errorText}>NETWORK ERROR</Text>
+            <TouchableOpacity onPress={() => search(searchedTicker)} style={s.retryBtn} activeOpacity={0.7}>
+              <Text style={s.retryText}>RETRY</Text>
+            </TouchableOpacity>
+          </View>
+        </>
       )}
 
       {status === 'ready' && (
@@ -256,86 +256,38 @@ export default function FilingsScreen() {
           data={filtered}
           keyExtractor={(item, i) => `${item.accessionNumber}-${i}`}
           style={s.list}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.amber}
+              colors={[colors.amber]}
+              progressBackgroundColor={colors.surface}
+            />
+          }
           ListHeaderComponent={
             <View>
-              <View style={s.filterRow}>
-                {FILTERS.map(f => (
-                  <TouchableOpacity
-                    key={f}
-                    onPress={() => setFilter(f)}
-                    style={[s.filterBtn, filter === f && s.filterActive]}
-                  >
-                    <Text style={[s.filterText, filter === f && s.filterActiveText]}>{f}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <View style={s.statusBar}>
-                <Text style={s.statusText}>{filtered.length} FILINGS</Text>
-                <Text style={s.statusSep}>|</Text>
-                <Text style={s.statusText} numberOfLines={1}>{companyName}</Text>
-              </View>
+              {header}
+              {companyName ? (
+                <View style={s.resultHeader}>
+                  <Text style={s.resultTicker}>{searchedTicker}</Text>
+                  <Text style={s.resultCompany} numberOfLines={1}>{companyName}</Text>
+                  <Text style={s.resultCount}>{filtered.length} FILINGS</Text>
+                </View>
+              ) : null}
             </View>
           }
-          renderItem={({ item }) => <FilingRow filing={item} />}
+          renderItem={({ item }) => (
+            <FilingRow filing={item} ticker={searchedTicker} companyName={companyName} />
+          )}
+          ListEmptyComponent={
+            <View style={s.center}>
+              <Text style={s.errorText}>NO FILINGS MATCH FILTERS</Text>
+            </View>
+          }
         />
       )}
     </View>
-  );
-}
-
-function IdleContent({
-  wfItems, wfLoading, wfEmpty, wfRefreshing, onRefresh, refExpanded, onToggleRef,
-}: {
-  wfItems: WatchlistFiling[];
-  wfLoading: boolean;
-  wfEmpty: boolean;
-  wfRefreshing: boolean;
-  onRefresh: () => void;
-  refExpanded: boolean;
-  onToggleRef: () => void;
-}) {
-  if (wfEmpty) {
-    return (
-      <View style={s.center}>
-        <Text style={s.prompt}>ADD STOCKS TO YOUR WATCHLIST TO SEE RECENT FILINGS</Text>
-      </View>
-    );
-  }
-
-  return (
-    <FlatList
-      data={wfItems}
-      keyExtractor={(item, i) => `wf-${item.ticker}-${item.accessionNumber}-${i}`}
-      style={s.list}
-      refreshControl={
-        <RefreshControl
-          refreshing={wfRefreshing}
-          onRefresh={onRefresh}
-          tintColor={colors.amber}
-          colors={[colors.amber]}
-          progressBackgroundColor={colors.surface}
-        />
-      }
-      ListHeaderComponent={
-        <View>
-          <ReferenceCard expanded={refExpanded} onToggle={onToggleRef} />
-          <View style={s.statusBar}>
-            <Text style={s.statusText}>{wfItems.length} RECENT FILINGS</Text>
-            <Text style={s.statusSep}>|</Text>
-            <Text style={s.statusText}>WATCHLIST</Text>
-          </View>
-        </View>
-      }
-      ListEmptyComponent={
-        wfLoading ? (
-          <View style={s.wfLoadingWrap}>
-            <ActivityIndicator color={colors.amber} />
-            <Text style={s.loadingText}>LOADING WATCHLIST FILINGS...</Text>
-          </View>
-        ) : null
-      }
-      renderItem={({ item }) => <WatchlistFilingRow filing={item} />}
-    />
   );
 }
 
@@ -367,7 +319,7 @@ function formColor(form: string): string {
   return colors.textMuted;
 }
 
-function FilingRow({ filing }: { filing: Filing }) {
+function FilingRow({ filing, ticker, companyName }: { filing: Filing; ticker: string; companyName: string }) {
   const fc = formColor(filing.form);
   return (
     <TouchableOpacity
@@ -379,34 +331,12 @@ function FilingRow({ filing }: { filing: Filing }) {
         <View style={[s.badge, { borderColor: fc }]}>
           <Text style={[s.badgeText, { color: fc }]}>{filing.form}</Text>
         </View>
-        <Text style={s.date}>{filing.filingDate}</Text>
-      </View>
-      {filing.reportDate ? (
-        <Text style={s.reportDate}>REPORT PERIOD: {filing.reportDate}</Text>
-      ) : null}
-      <Text style={s.accession} numberOfLines={1}>{filing.accessionNumber}</Text>
-    </TouchableOpacity>
-  );
-}
-
-function WatchlistFilingRow({ filing }: { filing: WatchlistFiling }) {
-  const fc = formColor(filing.form);
-  return (
-    <TouchableOpacity
-      onPress={() => WebBrowser.openBrowserAsync(filing.documentUrl)}
-      activeOpacity={0.7}
-      style={s.row}
-    >
-      <View style={s.rowTop}>
-        <View style={[s.badge, { borderColor: fc }]}>
-          <Text style={[s.badgeText, { color: fc }]}>{filing.form}</Text>
-        </View>
-        <View style={s.wfTickerBadge}>
-          <Text style={s.wfTickerText}>{filing.ticker}</Text>
+        <View style={s.tickerBadge}>
+          <Text style={s.tickerBadgeText}>{ticker}</Text>
         </View>
         <Text style={s.date}>{filing.filingDate}</Text>
       </View>
-      <Text style={s.wfCompany} numberOfLines={1}>{filing.companyName}</Text>
+      <Text style={s.company} numberOfLines={1}>{companyName}</Text>
       {filing.reportDate ? (
         <Text style={s.reportDate}>REPORT PERIOD: {filing.reportDate}</Text>
       ) : null}
@@ -416,7 +346,7 @@ function WatchlistFilingRow({ filing }: { filing: WatchlistFiling }) {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.surface },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 40 },
   list: { flex: 1 },
 
   searchRow: {
@@ -438,45 +368,65 @@ const s = StyleSheet.create({
     paddingVertical: 6,
     backgroundColor: colors.surfaceAlt,
   },
-  searchBtn: {
-    borderWidth: 1,
-    borderColor: colors.accent,
+
+  pickerRow: {
+    flexDirection: 'row',
+    gap: 8,
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    justifyContent: 'center',
+    marginTop: 8,
+    marginBottom: 6,
   },
-  searchBtnText: {
+  yearInput: {
+    width: 80,
     fontFamily: fonts.monoBold,
     fontSize: 10,
-    color: colors.accent,
-  },
-
-  suggestions: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    color: colors.textPrimary,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     backgroundColor: colors.surfaceAlt,
+    letterSpacing: 1,
   },
-  suggestionRow: {
-    flexDirection: 'row',
+  bigSearchBtn: {
+    marginHorizontal: 12,
+    marginVertical: 6,
+    borderWidth: 1,
+    borderColor: colors.accent,
+    paddingVertical: 10,
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    gap: 8,
   },
-  suggestionTicker: {
+  bigSearchText: {
     fontFamily: fonts.monoBold,
     fontSize: 11,
     color: colors.accent,
-    width: 60,
+    letterSpacing: 2,
   },
-  suggestionName: {
-    flex: 1,
+
+  resultHeader: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  resultTicker: {
+    fontFamily: fonts.monoBold,
+    fontSize: 13,
+    color: colors.accent,
+  },
+  resultCompany: {
     fontFamily: fonts.mono,
     fontSize: 10,
     color: colors.textSecondary,
+    marginTop: 2,
+  },
+  resultCount: {
+    fontFamily: fonts.mono,
+    fontSize: 9,
+    color: colors.textMuted,
+    marginTop: 4,
   },
 
-  prompt: { fontFamily: fonts.mono, fontSize: 10, color: colors.textMuted, letterSpacing: 1, textAlign: 'center' },
   loadingText: { fontFamily: fonts.mono, fontSize: 10, color: colors.textMuted, marginTop: 8 },
   errorText: { fontFamily: fonts.monoBold, fontSize: 11, color: colors.negative, textAlign: 'center' },
   retryBtn: {
@@ -488,25 +438,6 @@ const s = StyleSheet.create({
   },
   retryText: { fontFamily: fonts.monoBold, fontSize: 10, color: colors.accent },
 
-  filterRow: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: 6,
-    paddingHorizontal: 12, paddingVertical: 8,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
-  },
-  filterBtn: {
-    borderWidth: 1, borderColor: colors.border,
-    paddingHorizontal: 8, paddingVertical: 3,
-  },
-  filterActive: { borderColor: colors.accent, backgroundColor: colors.accent },
-  filterText: { fontFamily: fonts.monoBold, fontSize: 9, color: colors.textMuted },
-  filterActiveText: { color: colors.surface },
-  statusBar: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6,
-    backgroundColor: colors.surfaceAlt, borderBottomWidth: 1, borderBottomColor: colors.border,
-  },
-  statusText: { fontFamily: fonts.mono, fontSize: 10, color: colors.textMuted },
-  statusSep: { fontFamily: fonts.mono, fontSize: 10, color: colors.border, marginHorizontal: 6 },
-
   row: {
     paddingHorizontal: 12, paddingVertical: 10,
     borderBottomWidth: 1, borderBottomColor: colors.borderSubtle,
@@ -514,24 +445,21 @@ const s = StyleSheet.create({
   rowTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
   badge: { borderWidth: 1, paddingHorizontal: 6, paddingVertical: 1, marginRight: 8 },
   badgeText: { fontFamily: fonts.monoBold, fontSize: 9 },
-  date: { fontFamily: fonts.mono, fontSize: 10, color: colors.textMuted },
-  reportDate: { fontFamily: fonts.mono, fontSize: 10, color: colors.textSecondary, marginBottom: 2 },
-  accession: { fontFamily: fonts.mono, fontSize: 9, color: colors.textMuted },
-
-  wfTickerBadge: {
+  tickerBadge: {
     borderWidth: 1,
     borderColor: colors.accent,
     paddingHorizontal: 6,
     paddingVertical: 1,
     marginRight: 8,
   },
-  wfTickerText: { fontFamily: fonts.monoBold, fontSize: 9, color: colors.accent },
-  wfCompany: { fontFamily: fonts.mono, fontSize: 10, color: colors.textSecondary, marginBottom: 2 },
-  wfLoadingWrap: { paddingTop: 40, alignItems: 'center' },
+  tickerBadgeText: { fontFamily: fonts.monoBold, fontSize: 9, color: colors.accent },
+  date: { fontFamily: fonts.mono, fontSize: 10, color: colors.textMuted },
+  company: { fontFamily: fonts.mono, fontSize: 10, color: colors.textSecondary, marginBottom: 2 },
+  reportDate: { fontFamily: fonts.mono, fontSize: 10, color: colors.textSecondary, marginBottom: 2 },
 
   refCard: {
     marginHorizontal: 12,
-    marginTop: 10,
+    marginTop: 6,
     marginBottom: 6,
     borderWidth: 1,
     borderColor: colors.border,

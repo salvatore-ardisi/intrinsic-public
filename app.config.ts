@@ -6,8 +6,8 @@ dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: 'expo-app',
-  slug: 'expo-app',
+  name: 'Intrinsic',
+  slug: 'Intrinsic',
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/icon.png',
@@ -21,6 +21,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     bundleIdentifier: 'com.intrinsicmobile.app',
     supportsTablet: true,
+    infoPlist: {
+      LSApplicationCategoryType: 'public.app-category.finance',
+    },
   },
   android: {
     adaptiveIcon: {

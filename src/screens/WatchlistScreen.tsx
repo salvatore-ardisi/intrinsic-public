@@ -8,7 +8,9 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, fonts } from '../config/theme';
 import { getQuote, getProfile } from '../lib/prices';
-import type { Quote } from '../lib/types';
+import { loadTickerMap } from '../lib/edgar';
+import TickerAutocomplete from '../components/TickerAutocomplete';
+import type { Quote, TickerEntry } from '../lib/types';
 import type { RootStackParamList } from '../lib/navigation';
 
 const STORAGE_KEY = 'watchlist_tickers';
@@ -49,6 +51,34 @@ export default function WatchlistScreen() {
   const [addError, setAddError] = useState('');
   const [adding, setAdding] = useState(false);
   const profileCache = useRef<Record<string, string>>({});
+  const tickerMapRef = useRef<Record<string, TickerEntry> | null>(null);
+  const [suggestions, setSuggestions] = useState<TickerEntry[]>([]);
+
+  useEffect(() => {
+    loadTickerMap()
+      .then(map => { tickerMapRef.current = map; })
+      .catch(() => {});
+  }, []);
+
+  const updateSuggestions = useCallback((text: string) => {
+    const upper = text.trim().toUpperCase();
+    if (upper.length < 1 || !tickerMapRef.current) {
+      setSuggestions([]);
+      return;
+    }
+    const map = tickerMapRef.current;
+    const matches: TickerEntry[] = [];
+    for (const entry of Object.values(map)) {
+      if (matches.length >= 6) break;
+      if (
+        entry.ticker.startsWith(upper) ||
+        entry.title.toUpperCase().includes(upper)
+      ) {
+        matches.push(entry);
+      }
+    }
+    setSuggestions(matches);
+  }, []);
 
   const fetchAll = useCallback(async (tickerList: string[]) => {
     const results = await Promise.all(
@@ -102,6 +132,7 @@ export default function WatchlistScreen() {
       return;
     }
     Keyboard.dismiss();
+    setSuggestions([]);
     setAdding(true);
     setAddError('');
 
@@ -149,7 +180,7 @@ export default function WatchlistScreen() {
         <TextInput
           style={s.input}
           value={addText}
-          onChangeText={t => { setAddText(t); setAddError(''); }}
+          onChangeText={t => { setAddText(t); setAddError(''); updateSuggestions(t); }}
           onSubmitEditing={addTicker}
           placeholder="ADD TICKER"
           placeholderTextColor={colors.textMuted}
@@ -177,6 +208,14 @@ export default function WatchlistScreen() {
         </View>
       )}
 
+      <TickerAutocomplete
+        suggestions={suggestions}
+        onSelect={entry => {
+          setAddText(entry.ticker);
+          setSuggestions([]);
+        }}
+      />
+
       {items.length === 0 ? (
         <View style={s.center}>
           <Text style={s.prompt}>ADD A TICKER TO START YOUR WATCHLIST</Text>
@@ -194,13 +233,6 @@ export default function WatchlistScreen() {
               colors={[colors.amber]}
               progressBackgroundColor={colors.surface}
             />
-          }
-          ListHeaderComponent={
-            <View style={s.statusBar}>
-              <Text style={s.statusText}>{items.length} SYMBOLS</Text>
-              <Text style={s.statusSep}>|</Text>
-              <Text style={s.statusText}>DELAYED</Text>
-            </View>
           }
           renderItem={({ item }) => (
             <WatchlistRow item={item} onRemove={removeTicker} onPress={openDetail} />
@@ -290,18 +322,6 @@ const s = StyleSheet.create({
   errorText: { fontFamily: fonts.mono, fontSize: 10, color: colors.negative },
 
   prompt: { fontFamily: fonts.mono, fontSize: 10, color: colors.textMuted, letterSpacing: 1 },
-
-  statusBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: colors.surfaceAlt,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  statusText: { fontFamily: fonts.mono, fontSize: 10, color: colors.textMuted },
-  statusSep: { fontFamily: fonts.mono, fontSize: 10, color: colors.border, marginHorizontal: 6 },
 
   row: {
     flexDirection: 'row',

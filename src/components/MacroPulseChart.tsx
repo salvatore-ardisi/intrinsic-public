@@ -146,7 +146,7 @@ function ChartBody({ unrateData, fedData }: { unrateData: Observation[]; fedData
       </View>
 
       <Text style={s.caption}>
-        The Fed cuts rates when unemployment rises, raises when it falls. This relationship drives the business cycle.
+        Unemployment and the fed funds rate are the two sides of the Fed's policy equation. Rising unemployment pressures the FOMC to cut; a tight labor market gives room to hold or hike. The lag between turns in each series reflects the transmission delay of monetary policy.
       </Text>
     </View>
   );

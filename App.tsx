@@ -9,6 +9,7 @@ import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-g
 import type { PanGestureHandlerStateChangeEvent } from 'react-native-gesture-handler';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import type { MaterialTopTabBarProps } from '@react-navigation/material-top-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -46,6 +47,8 @@ const DrawerContext = createContext<{ toggle: () => void; openDrawer: () => void
 export function useDrawer() {
   return useContext(DrawerContext);
 }
+
+export const PendingNavContext = createContext<React.MutableRefObject<{ tab: string; params?: Record<string, string> } | null>>({ current: null });
 
 const EconomyTab = createMaterialTopTabNavigator<EconomyTabParamList>();
 const StocksTab = createMaterialTopTabNavigator<StocksTabParamList>();
@@ -280,9 +283,25 @@ const STOCKS_TITLES = ['WATCHLIST', 'CHARTS', 'FILINGS', 'NEWS', 'VALUATION'];
 
 function StocksTabs() {
   const { tabIndex, renderTabBar } = useFloor();
+  const pendingRef = useContext(PendingNavContext);
+  const navRef = useRef<any>(null);
+
+  useEffect(() => {
+    const pending = pendingRef.current;
+    if (pending && navRef.current) {
+      pendingRef.current = null;
+      navRef.current.navigate(pending.tab, pending.params ?? {});
+    }
+  });
+
+  const handleTabBarRef = useCallback((props: MaterialTopTabBarProps) => {
+    navRef.current = props.navigation;
+    return renderTabBar(props);
+  }, [renderTabBar]);
+
   return (
     <FloorContainer titles={STOCKS_TITLES} tabIndex={tabIndex}>
-      <StocksTab.Navigator tabBarPosition="bottom" tabBar={renderTabBar}>
+      <StocksTab.Navigator tabBarPosition="bottom" tabBar={handleTabBarRef}>
         <StocksTab.Screen name="Watchlist" component={WatchlistScreen} options={{ title: 'WATCHLIST', tabBarIcon: ({ color }) => <Ionicons name="eye-outline" size={TAB_ICON_SIZE} color={color} /> }} />
         <StocksTab.Screen name="StockCharts" component={StocksCharts} options={{ title: 'CHARTS', tabBarIcon: ({ color }) => <Ionicons name="stats-chart" size={TAB_ICON_SIZE} color={color} /> }} />
         <StocksTab.Screen name="Filings" component={FilingsScreen} options={{ title: 'FILINGS', tabBarIcon: ({ color }) => <Ionicons name="document-text-outline" size={TAB_ICON_SIZE} color={color} /> }} />
@@ -383,8 +402,17 @@ const SECTION_COMPONENTS: Record<Section, React.ComponentType> = {
   Commodities: CommoditiesTabs,
 };
 
-function MainScreen() {
-  const [activeSection, setActiveSection] = useState<Section>('Economy');
+type MainProps = NativeStackScreenProps<RootStackParamList, 'Main'>;
+
+function MainScreen({ route }: MainProps) {
+  const initFloor = route.params?.floor as Section | undefined;
+  const [activeSection, setActiveSection] = useState<Section>(
+    initFloor && SECTION_COMPONENTS[initFloor] ? initFloor : 'Economy',
+  );
+  const initTab = route.params?.tab;
+  const pendingNav = useRef<{ tab: string; params?: Record<string, string> } | null>(
+    initTab ? { tab: initTab, params: route.params?.params } : null,
+  );
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [aboutVisible, setAboutVisible] = useState(false);
   const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
@@ -415,10 +443,20 @@ function MainScreen() {
     closeDrawer();
   }, [closeDrawer]);
 
+  useEffect(() => {
+    const floor = route.params?.floor as Section | undefined;
+    const tab = route.params?.tab;
+    if (floor && SECTION_COMPONENTS[floor]) {
+      setActiveSection(floor);
+      if (tab) pendingNav.current = { tab, params: route.params?.params };
+    }
+  }, [route.params]);
+
   const ActiveComponent = SECTION_COMPONENTS[activeSection];
 
   return (
     <DrawerContext.Provider value={{ toggle, openDrawer }}>
+      <PendingNavContext.Provider value={pendingNav}>
       <View style={{ flex: 1, backgroundColor: colors.surface }}>
         <ActiveComponent />
 
@@ -490,6 +528,7 @@ function MainScreen() {
           </TouchableWithoutFeedback>
         </Modal>
       </View>
+    </PendingNavContext.Provider>
     </DrawerContext.Provider>
   );
 }

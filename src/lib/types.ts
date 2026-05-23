@@ -36,6 +36,7 @@ export interface NewsItem {
   link: string;
   date: string | null;
   source: string;
+  description?: string;
 }
 
 export interface ResearchItem {

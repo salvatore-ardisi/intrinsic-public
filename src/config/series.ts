@@ -72,22 +72,20 @@ export const RESEARCH_FEEDS = [
 ];
 
 export const NEWS_FEEDS = [
-  { name: 'CNBC', url: 'https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114' },
+  { name: 'CNBC', url: 'https://www.cnbc.com/id/20910258/device/rss/rss.html' },
   { name: 'Bloomberg', url: 'https://feeds.bloomberg.com/markets/news.rss' },
-  { name: 'MarketWatch', url: 'https://feeds.marketwatch.com/marketwatch/topstories' },
   { name: 'FT', url: 'https://www.ft.com/markets?format=rss' },
   { name: 'Yahoo Finance', url: 'https://feeds.finance.yahoo.com/rss/2906723' },
-  { name: 'AP', url: 'https://rsshub.app/apnews/topics/business' },
 ];
 
 export const EXPLAINERS: Record<string, string> = {
   UNRATE: 'The unemployment rate is the percentage of the labor force that is jobless and actively seeking employment. It is the most widely watched indicator of labor market health. Rising unemployment signals economic weakness; falling unemployment signals strength, but very low levels can signal overheating and wage pressure.',
-  CES0000000001: 'Total nonfarm payrolls measure the number of jobs added or lost in the economy each month, excluding farm workers. This is the headline number from the monthly jobs report and is often the single most market-moving economic data release.',
+  CES0000000001: 'Total nonfarm payrolls is the count of all jobs in the U.S. economy excluding farm workers. The month-over-month change is the headline number from the monthly jobs report and is often the single most market-moving economic data release.',
   LNS11300000: 'The labor force participation rate is the share of the working-age population either employed or actively looking for work. A declining rate can mean workers are discouraged and dropping out of the labor force, which masks true unemployment.',
   CPIAUCSL: 'The Consumer Price Index tracks the average change in prices paid by urban consumers for a basket of goods and services. It is the most commonly cited measure of inflation and directly affects cost-of-living adjustments, wage negotiations, and Fed policy decisions.',
   PCEPI: 'The Personal Consumption Expenditures Price Index is the Federal Reserve preferred inflation measure. Unlike CPI, it accounts for consumers substituting cheaper alternatives when prices rise, making it a more comprehensive inflation gauge.',
   T10YIE: 'The 10-year breakeven inflation rate represents the market expectation for average annual inflation over the next decade. It is derived from the spread between nominal Treasury yields and TIPS. Rising breakevens signal the bond market expects higher inflation ahead.',
-  GDPC1: 'Real Gross Domestic Product is the inflation-adjusted value of all goods and services produced in the U.S. It is the broadest measure of economic output and the official benchmark for determining whether the economy is in recession (two consecutive quarters of decline).',
+  GDPC1: 'Real Gross Domestic Product is the inflation-adjusted value of all goods and services produced in the U.S. It is the broadest measure of economic output and the official benchmark for determining whether the economy is in recession (commonly cited as a recession signal, though the NBER uses broader criteria to make the official call).',
   FEDFUNDS: 'The effective federal funds rate is the interest rate banks charge each other for overnight lending. It is the primary tool the Federal Reserve uses to implement monetary policy. Changes ripple through every interest rate in the economy, from mortgages to corporate bonds to savings accounts.',
   DGS10: 'The 10-year Treasury yield is the benchmark interest rate for the U.S. economy. It directly influences mortgage rates, corporate borrowing costs, and stock valuations. It also reflects market expectations about future growth and inflation.',
   DGS2: 'The 2-year Treasury yield reflects market expectations for Fed policy over the next two years. It moves more directly with expected Fed rate changes than the 10-year, making it a purer read on near-term monetary policy expectations.',

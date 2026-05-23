@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, RefreshControl,
   StyleSheet, ActivityIndicator, Linking,
@@ -10,10 +10,29 @@ import type { NewsItem } from '../lib/types';
 import DailySpark from '../components/DailySpark';
 import type { DailySparkHandle } from '../components/DailySpark';
 
+type NewsFilter = 'ALL' | 'LABOR' | 'INFLATION' | 'FED' | 'GROWTH' | 'RATES';
+const NEWS_FILTERS: NewsFilter[] = ['ALL', 'LABOR', 'INFLATION', 'FED', 'GROWTH', 'RATES'];
+
+const FILTER_KEYWORDS: Record<Exclude<NewsFilter, 'ALL'>, string[]> = {
+  LABOR: ['unemployment', 'jobs', 'payrolls', 'nonfarm', 'hiring', 'layoffs', 'labor', 'participation', 'employment', 'wages', 'workers', 'workforce'],
+  INFLATION: ['inflation', 'cpi', 'consumer prices', 'pce', 'cost of living', 'deflation', 'tariff', 'tariffs', 'prices'],
+  FED: ['fed', 'fomc', 'interest rate', 'rate cut', 'rate hike', 'powell', 'monetary policy', 'tightening', 'easing', 'dovish', 'hawkish', 'central bank', 'federal reserve'],
+  GROWTH: ['gdp', 'recession', 'economic growth', 'expansion', 'output', 'productivity', 'consumer spending', 'retail sales'],
+  RATES: ['treasury', 'yield', 'mortgage', 'bond', '10-year', '2-year', 'yield curve', 'credit', 'spread', 'basis points', 'bps'],
+};
+
+function matchesFilter(item: NewsItem, filter: NewsFilter): boolean {
+  if (filter === 'ALL') return true;
+  const keywords = FILTER_KEYWORDS[filter];
+  const text = `${item.title} ${item.description ?? ''}`.toLowerCase();
+  return keywords.some(kw => text.includes(kw));
+}
+
 export default function NewsScreen() {
   const [items, setItems] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [filter, setFilter] = useState<NewsFilter>('ALL');
   const sparkRef = useRef<DailySparkHandle>(null);
 
   const load = useCallback(async (force = false) => {
@@ -34,6 +53,11 @@ export default function NewsScreen() {
     setRefreshing(false);
   }, [load]);
 
+  const filtered = useMemo(() => {
+    if (filter === 'ALL') return items;
+    return items.filter(item => matchesFilter(item, filter));
+  }, [items, filter]);
+
   if (loading) {
     return (
       <View style={s.center}>
@@ -44,7 +68,7 @@ export default function NewsScreen() {
 
   return (
     <FlatList
-      data={items}
+      data={filtered}
       keyExtractor={(_, i) => String(i)}
       style={s.list}
       refreshControl={
@@ -53,10 +77,16 @@ export default function NewsScreen() {
       ListHeaderComponent={
         <>
           <DailySpark ref={sparkRef} />
-          <View style={s.statusBar}>
-            <Text style={s.statusText}>{items.length} ARTICLES</Text>
-            <Text style={s.statusSep}>|</Text>
-            <Text style={s.statusText}>MULTI-SOURCE RSS</Text>
+          <View style={s.filterRow}>
+            {NEWS_FILTERS.map(f => (
+              <TouchableOpacity
+                key={f}
+                onPress={() => setFilter(f)}
+                style={[s.filterBtn, filter === f && s.filterActive]}
+              >
+                <Text style={[s.filterText, filter === f && s.filterActiveText]}>{f}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </>
       }
@@ -96,12 +126,18 @@ function formatNewsDate(dateStr: string): string {
 const s = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.surface },
   list: { flex: 1, backgroundColor: colors.surface },
-  statusBar: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6,
-    backgroundColor: colors.surfaceAlt, borderBottomWidth: 1, borderBottomColor: colors.border,
+  filterRow: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: 6,
+    paddingHorizontal: 12, paddingVertical: 8,
+    borderBottomWidth: 1, borderBottomColor: colors.border,
   },
-  statusText: { fontFamily: fonts.mono, fontSize: 10, color: colors.textMuted },
-  statusSep: { fontFamily: fonts.mono, fontSize: 10, color: colors.border, marginHorizontal: 6 },
+  filterBtn: {
+    borderWidth: 1, borderColor: colors.border,
+    paddingHorizontal: 8, paddingVertical: 3,
+  },
+  filterActive: { borderColor: colors.accent, backgroundColor: colors.accent },
+  filterText: { fontFamily: fonts.monoBold, fontSize: 9, color: colors.textMuted },
+  filterActiveText: { color: colors.surface },
   row: {
     paddingHorizontal: 12, paddingVertical: 10,
     borderBottomWidth: 1, borderBottomColor: colors.borderSubtle,
