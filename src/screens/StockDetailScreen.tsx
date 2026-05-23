@@ -13,6 +13,8 @@ import { colors, fonts } from '../config/theme';
 import { getQuote, getProfile, getCandle } from '../lib/prices';
 import type { CandleResult } from '../lib/prices';
 import { getTickerDetails, getRelatedTickers, getDividends } from '../lib/massive';
+import { fetchCompanyFacts, extractLatestMetrics } from '../lib/xbrl';
+import type { LatestMetrics } from '../lib/xbrl';
 import type { Quote, StockProfile, TickerDetails, Dividend } from '../lib/types';
 import { padDomain } from '../lib/chartUtils';
 import type { RootStackParamList } from '../lib/navigation';
@@ -48,6 +50,7 @@ export default function StockDetailScreen({ route, navigation }: Props) {
   const [tickerDetails, setTickerDetails] = useState<TickerDetails | null>(null);
   const [relatedTickers, setRelatedTickers] = useState<string[]>([]);
   const [dividends, setDividends] = useState<Dividend[]>([]);
+  const [xbrlMetrics, setXbrlMetrics] = useState<LatestMetrics | null>(null);
   const [descExpanded, setDescExpanded] = useState(false);
   const [range, setRange] = useState<Range>('1Y');
   const [loading, setLoading] = useState(true);
@@ -75,6 +78,11 @@ export default function StockDetailScreen({ route, navigation }: Props) {
 
       const div = await getDividends(symbol);
       if (!cancelled) setDividends(div);
+
+      const factsResult = await fetchCompanyFacts(symbol);
+      if (!cancelled && factsResult) {
+        setXbrlMetrics(extractLatestMetrics(factsResult.facts));
+      }
     })();
     return () => { cancelled = true; };
   }, [symbol]);
@@ -246,8 +254,24 @@ export default function StockDetailScreen({ route, navigation }: Props) {
             <View style={s.grid}>
               <GridCell label="52W RANGE" value={weekRange52 ?? '-'} />
               <GridCell label="DIVIDEND" value={dividendDisplay} />
-              <GridCell label="P/E" value="-" muted />
-              <GridCell label="EPS" value="-" muted />
+              <GridCell
+                label="P/E"
+                value={
+                  q && xbrlMetrics?.epsDiluted && xbrlMetrics.epsDiluted > 0
+                    ? (q.c / xbrlMetrics.epsDiluted).toFixed(2)
+                    : '-'
+                }
+                muted={!xbrlMetrics?.epsDiluted}
+              />
+              <GridCell
+                label="EPS"
+                value={
+                  xbrlMetrics?.epsDiluted != null
+                    ? `$${xbrlMetrics.epsDiluted.toFixed(2)}`
+                    : '-'
+                }
+                muted={xbrlMetrics?.epsDiluted == null}
+              />
             </View>
           </View>
 
