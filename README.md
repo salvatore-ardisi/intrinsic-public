@@ -1,14 +1,16 @@
-![License: GPL-3.0](https://img.shields.io/badge/License-GPL%203.0-blue.svg) ![Platform: iOS](https://img.shields.io/badge/Platform-iOS-lightgrey.svg) ![Expo SDK 54](https://img.shields.io/badge/Expo_SDK-54-000020.svg) ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6.svg) ![Cloudflare Workers](https://img.shields.io/badge/Proxy-Cloudflare_Workers-F38020.svg) ![Claude API](https://img.shields.io/badge/AI-Claude_API-D97757.svg) ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
+<p align="center">
+  <img src="assets/icon.png" alt="Intrinsic Mobile" width="80" />
+</p>
 
-# Intrinsic Mobile
+<h1 align="center">Intrinsic Mobile</h1>
+
+![License: GPL-3.0](https://img.shields.io/badge/License-GPL%203.0-blue.svg) ![Platform: iOS](https://img.shields.io/badge/Platform-iOS-lightgrey.svg) ![Expo SDK 54](https://img.shields.io/badge/Expo_SDK-54-000020.svg) ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6.svg) ![Cloudflare Workers](https://img.shields.io/badge/Proxy-Cloudflare_Workers-F38020.svg) ![Claude API](https://img.shields.io/badge/AI-Claude_API-D97757.svg) ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
 
 A mobile market intelligence app built with Expo and React Native. Dense, data-focused dark monospace interface for tracking U.S. macroeconomic indicators, equities, SEC filings, and Federal Reserve communications.
 
-## Demo
-
-<div align="center">
-  <img src="assets/demo.gif" alt="Intrinsic Mobile demo" width="350" />
-</div>
+<p align="center">
+  <img src="assets/demo.gif" alt="Demo" width="350" />
+</p>
 
 ## Screenshots
 
